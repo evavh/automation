@@ -62,7 +62,7 @@ def setup():
     #Load config
     this_file = os.path.dirname(__file__)
     config = configparser.RawConfigParser()
-    config.read(os.path.join(this_file, "google_config.ini"))
+    config.read(os.path.join(this_file, "config", "google_config.ini"))
     
     #Check whether config is complete
     for key in ['client_id', 'client_secret', 'targets', 'hours_ahead']:
@@ -119,17 +119,12 @@ def first_event():
             r = requests.get(url, headers=headers, params=parameters)
             event_list = r.json()['items']
             
-            if event_list == []:
-                print("No events within {} hours in {}".format(hours_ahead, calendar['summary']))
-            else:
-                print("{} events within {} hours in {}".format(len(event_list), hours_ahead, calendar['summary']))
+            if not event_list == []:
                 #Run through events to find the first one that matches the conditions
                 #(has name, has start time, is marked as busy)
                 for event in event_list:
                     if 'summary' in event and 'dateTime' in event['start']: #event has name and start time (not all day)
-                        if 'transparency' in event and event['transparency'] == 'transparent':
-                            print("Event {} marked as available".format(event['summary']))
-                        else: #event is marked as busy
+                        if not 'transparency' in event: #event is marked as busy
                             next_event = {}
                             next_event['name'] = event['summary']
                             
@@ -143,12 +138,10 @@ def first_event():
                 
                 next_event_list.append(next_event)
     if next_event_list == []:
-        print("No events found within {} hours, feel free to sleep however long!".format(hours_ahead))
         first_event = None
     else:
         sorted_list = sorted(next_event_list, key=lambda k: k['start'])
         first_event = sorted_list[0]
-        print("The first event to occur is {} on datetime {}".format(first_event['name'], first_event['start']))
     
     return first_event
 
