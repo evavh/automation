@@ -4,7 +4,6 @@ import datetime
 import numpy as np
 
 from phue import Bridge
-import colourconvert
 
 bridge = Bridge('192.168.0.100')
 
@@ -20,24 +19,13 @@ lightbytime = np.array([[datetime.time( 8,00), 4000, 255],
                [datetime.time(23,00), 1700,  50]]).transpose().tolist()
 
 
-def set_to_temp(temperature, brightness=-1):
-    rgb = colourconvert.temp_to_rgb(temperature)
-    xyb = colourconvert.rgb_to_xy(rgb[0], rgb[1], rgb[2])
-    xy = [xyb[0], xyb[1]]
-    
-    if brightness == -1:
-        if temperature < 6600:
-            brightness = xyb[2]
-        else:
-            brightness = 255
-    
-    print("Lights set to", str(temperature)+"K at brightness", brightness)
-    
+def set_to_temp(temperature, brightness):
     for light in lights:
         light.on = True
-        light.xy = xy
-    temperature = 3500
-    light.brightness = brightness
+        light.colortemp_k = temperature
+        light.brightness = brightness
+    
+    print("Lights set to {}K at brightness {}".format(temperature, brightness))
     
     return temperature, brightness
 
