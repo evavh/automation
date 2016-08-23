@@ -138,8 +138,6 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
                 hour = int(command[5:7])
                 minute = int(command[8:10])
                 print(hour, minute)
-                #if hour == 0 and minute == 0:
-                #    plotting.temp_plot_last("temp_yesterday", 1)
             
             #sensor checking: sets temperature and light_level
             elif "sensors:temp" in command:
@@ -149,14 +147,11 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
                 write_log(str(temperature), filename=TEMP_LOG_FILE+"_"+year_month, date_format=None)
             
             elif "sensors:light" in command:
-                prev_prev_light_level = prev_light_level
-                prev_light_level = light_level
-                
                 light_level = int(command[14:])
                 prev_curtain = curtain
-                if light_level > CURTAIN_THRESHHOLD + 7 and ((light_level > prev_light_level + 10 and light_level > prev_prev_light_level + 10) or prev_light_level == -1):
+                if light_level > CURTAIN_THRESHHOLD + 7:
                     curtain = False
-                elif light_level < CURTAIN_THRESHHOLD and ((light_level < prev_light_level - 10 and light_level < prev_prev_light_level - 10) or prev_light_level == -1):
+                elif light_level < CURTAIN_THRESHHOLD:
                     curtain = True
             
             elif "http:command" in command:
@@ -180,14 +175,7 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
                 if not lights_brightness is None:
                     status['lights_brightness'] = round((lights_brightness/255)*100)
                 statusqueue.put(status)
-                '''
-                if lights_off:
-                    statusqueue.put("Light level: {}\nCurtain: {}\nTemperature: {} C\nNight mode: {}\nUser present: {}\nAll lights are off".format(light_level, curtain, temperature, night_mode, user_present))
-                elif lights_off == False:
-                    statusqueue.put("Light level: {}\nCurtain: {}\nTemperature: {} C\nNight mode: {}\nUser present: {}\nLights: {}K at {}%".format(light_level, curtain, temperature, night_mode, user_present, lights_temp, round((lights_brightness/255)*100)))
-                else:
-                    statusqueue.put("Light level: {}\nCurtain: {}\nTemperature: {} C\nNight mode: {}\nUser present: {}\nLights: unknown".format(light_level, curtain, temperature, night_mode, user_present))
-            '''
+
             #unimplemented or faulty commands
             else:
                 write_log("unknown command: {}".format(command))
