@@ -30,22 +30,16 @@ def timing():
     return first_event, travel_time
 
 def getup_time(first_event, travel_time):
-    sleep_at = datetime.datetime.now()
-    needed_sleep = datetime.timedelta(hours=9, minutes=30)
-    
     routine = datetime.timedelta(minutes=45)
     extra = datetime.timedelta(minutes=10)
-    
     total_time = travel_time + routine + extra
     
-    if sleep_at + needed_sleep + total_time > first_event['start']:
-        getup_time = first_event['start'] - total_time
-        enough_sleep = False
-    else:
-        getup_time = sleep_at + needed_sleep
-        enough_sleep = True
+    getup_time = first_event['start'] - total_time
     
-    return getup_time, enough_sleep
+    return getup_time
+
+def alarm_now(night_mode, user_present, getup_time)
+    
 
 if __name__ == '__main__':
     first_event, travel_time = timing()
@@ -59,11 +53,6 @@ if __name__ == '__main__':
     
     print("Time to travel to {} at {:%H:%M}: {}".format(first_event['name'], first_event['start'], timestring))
     
-    getup_time, enough_sleep = getup_time(first_event, travel_time)
+    getup_time = getup_time(first_event, travel_time)
     
-    if enough_sleep:
-        enoughstring = ""
-    else:
-        enoughstring = "not "
-    
-    print("Time to get up: {:%H:%M} ({}enough sleep)".format(getup_time, enoughstring))
+    print("Time to get up: {:%H:%M}".format(getup_time, enoughstring))
