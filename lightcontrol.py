@@ -9,14 +9,14 @@ bridge = Bridge('192.168.0.100')
 
 lights = bridge.get_light_objects()
 
-lightbytime = np.array([[datetime.time( 8,00), 4000, 255],
-               [datetime.time(20,00), 3500, 255],
-               [datetime.time(20,30), 3500, 255],
-               [datetime.time(21,00), 3000, 200],
-               [datetime.time(21,30), 3000, 200],
-               [datetime.time(22,00), 2500, 150],
+lightbytime = np.array([[datetime.time( 8,00), 3500, 255],
+               [datetime.time(20,00), 3000, 255],
+               [datetime.time(20,30), 3000, 255],
+               [datetime.time(21,00), 2800, 255],
+               [datetime.time(21,30), 2500, 200],
+               [datetime.time(22,00), 2300, 150],
                [datetime.time(22,30), 2000, 100],
-               [datetime.time(23,00), 1700,  50]]).transpose().tolist()
+               [datetime.time(23,00), 1500,  50]]).transpose().tolist()
 
 
 def set_to_temp(temperature, brightness):

@@ -99,6 +99,7 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
     #init
     user_present = None
     prev_user_present = None
+    prev_prev_user_present = None
     
     curtain = None
     prev_curtain = None
@@ -125,13 +126,16 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
             #bluetooth checking: sets user_present and prev_user_present
             if "bluetooth:"+USER_NAME in command:
                 if "in" in command:
+                    user_event.set()
+                    prev_prev_user_present = prev_user_present
                     prev_user_present = user_present
                     user_present = True
-                    user_event.set()
                 elif "out" in command:
+                    if not prev_prev_user_present and not prev_user_present:'
+                        user_event.clear()
+                    prev_prev_user_present = prev_user_present
                     prev_user_present = user_present
                     user_present = False
-                    user_event.clear()
             
             #time checking: sets new hour and minute
             elif "time" in command:

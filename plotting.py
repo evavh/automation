@@ -36,6 +36,8 @@ def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_t
     
     plt.ylabel("Temperature [C]")
     plt.xlim(begin_date, end_date)
+    #yrange = temperature[np.where(dates==begin_date)[0]:np.where(dates==end_date)[0]]
+    #plt.ylim(min(yrange), max(yrange))
     
     plt.grid(which='major', axis='both', linestyle='dashed')
     plt.grid(which='minor', axis='x', linestyle='dotted')
