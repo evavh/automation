@@ -98,8 +98,7 @@ def startthread(function, arguments, as_daemon=False):
 def main_function(commandqueue, statusqueue, user_event, day_event):
     #init
     user_present = None
-    prev_user_present = None
-    prev_prev_user_present = None
+    user_not_present_count = 0
     
     curtain = None
     prev_curtain = None
@@ -123,19 +122,18 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
         while True:        
             command = commandqueue.get(block=True)
             
-            #bluetooth checking: sets user_present and prev_user_present
+            #bluetooth checking: sets user_present
             if "bluetooth:"+USER_NAME in command:
                 if "in" in command:
-                    user_event.set()
-                    prev_prev_user_present = prev_user_present
-                    prev_user_present = user_present
                     user_present = True
+                    user_not_present_count = 0
+                    user_event.set()
                 elif "out" in command:
-                    if not prev_prev_user_present and not prev_user_present:'
-                        user_event.clear()
-                    prev_prev_user_present = prev_user_present
-                    prev_user_present = user_present
                     user_present = False
+                    user_not_present_count += 1
+                    if user_not_present_count > 3: #we are sure the user is gone
+                        user_event.clear()
+                    
             
             #time checking: sets new hour and minute
             elif "time" in command:
@@ -152,6 +150,7 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
             
             elif "sensors:light" in command:
                 light_level = int(command[14:])
+                write_log(str(light_level), filename=LIGHT_LOG_FILE, date_format=None)
                 prev_curtain = curtain
                 if light_level > CURTAIN_THRESHHOLD + 7:
                     curtain = False
@@ -225,10 +224,8 @@ def bluetooth_function(commandqueue, day_event):
         
         if name == USER_NAME:
             commandqueue.put("bluetooth:{}:in".format(USER_NAME))
-            #print("user present")
         else:
             commandqueue.put("bluetooth:{}:out".format(USER_NAME))
-            #print("user not present")
         
         end = datetime.now()
         dt = (end - start).total_seconds()

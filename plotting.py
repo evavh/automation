@@ -45,20 +45,27 @@ def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_t
     plt.title("The temperature of the room")
     
     low_temp = temperature.copy()
+    med_temp = temperature.copy()
     high_temp = temperature.copy()
     
     temperature_shift_up = np.append(temperature[1:], np.nan)
     
     for i in range(0, len(temperature)-1):
-        if temperature[i] > 24 and temperature[i+1] > 24:
+        if temperature[i] > 20 and temperature[i+1] > 20:
             low_temp[i] = np.nan
-        elif temperature[i] <= 24 and temperature[i+1] <= 24:
+            if temperature[i] > 24 and temperature[i+1] > 24:
+                med_temp[i] = np.nan
+            elif temperature[i] <= 24 and temperature[i+1] <= 24:
+                high_temp[i] = np.nan
+        elif temperature[i] <= 20 and temperature[i+1] <=20:
+            med_temp[i] = np.nan
             high_temp[i] = np.nan
     
     #print(len(low_temp))
     #print(len(high_temp), len(dates))
     
     plt.plot(dates, low_temp, color='b')
+    plt.plot(dates, med_temp, color='orange')
     plt.plot(dates, high_temp, color='r')
     
     plt.tight_layout()
