@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+
+#implements an http server to receive commands from the user
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time
 import cgi
@@ -46,7 +49,6 @@ def MakeHandlerClass(commandqueue, statusqueue):
 
 def http_function(commandqueue, statusqueue):
     my_server = HTTPServer((hostName, hostPort), MakeHandlerClass(commandqueue, statusqueue))
-    #print("http server started at port {}".format(hostPort))
     
     try:
           my_server.serve_forever()

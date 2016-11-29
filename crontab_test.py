@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+#testing the use of crontabs for alarms
+
 from crontab import CronTab
 import datetime
 

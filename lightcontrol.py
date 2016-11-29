@@ -1,3 +1,6 @@
+#contains the functions for sun simulation and other interactions
+#with the hue system
+
 import random
 import time
 import datetime

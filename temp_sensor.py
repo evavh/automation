@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+
+#simply provides the project with a temperature reading function
+
 import os
 import glob
 import time

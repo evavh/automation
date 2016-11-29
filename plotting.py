@@ -1,4 +1,8 @@
 #!/usr/bin/python3
+
+#functions for plotting, can be run with command line arguments day and
+#hour to plot the last timeslot of temperature readings
+
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -36,8 +40,6 @@ def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_t
     
     plt.ylabel("Temperature [C]")
     plt.xlim(begin_date, end_date)
-    #yrange = temperature[np.where(dates==begin_date)[0]:np.where(dates==end_date)[0]]
-    #plt.ylim(min(yrange), max(yrange))
     
     plt.grid(which='major', axis='both', linestyle='dashed')
     plt.grid(which='minor', axis='x', linestyle='dotted')
@@ -61,8 +63,6 @@ def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_t
             med_temp[i] = np.nan
             high_temp[i] = np.nan
     
-    #print(len(low_temp))
-    #print(len(high_temp), len(dates))
     
     plt.plot(dates, low_temp, color='b')
     plt.plot(dates, med_temp, color='orange')

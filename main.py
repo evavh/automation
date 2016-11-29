@@ -1,4 +1,10 @@
 #!/usr/bin/python3
+
+#the main file, consisting of a loop that reads out the command queue
+#and status queue, which are filled by several threads also started
+#through this file. Also contains the light setter (a big if statement)
+#and sensor functions
+
 import configparser
 import time
 import os
@@ -13,6 +19,8 @@ import lightcontrol
 import tsl2561
 import temp_sensor
 import http_commands
+
+present_thresh = 3
 
 '''Reading configuration'''
 
@@ -98,6 +106,7 @@ def startthread(function, arguments, as_daemon=False):
 def main_function(commandqueue, statusqueue, user_event, day_event):
     #init
     user_present = None
+    prev_user_present = None
     user_not_present_count = 0
     
     curtain = None
@@ -125,14 +134,16 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
             #bluetooth checking: sets user_present
             if "bluetooth:"+USER_NAME in command:
                 if "in" in command:
+                    prev_user_present = user_present
                     user_present = True
                     user_not_present_count = 0
                     user_event.set()
                 elif "out" in command:
-                    user_present = False
                     user_not_present_count += 1
-                    if user_not_present_count > 3: #we are sure the user is gone
+                    if user_not_present_count > present_thresh: #we are sure the user is gone
                         user_event.clear()
+                        prev_user_present = user_present
+                        user_present = False
                     
             
             #time checking: sets new hour and minute

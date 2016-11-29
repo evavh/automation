@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 
+#an implementation for the google calendar api, with as main use to
+#get the first upcoming event and its properties
+
 import requests
 import time
 import configparser

@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+
+#experimental program that as of now only calculates the time to get up
+
 import requests
 import datetime
 import math
