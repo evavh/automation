@@ -59,37 +59,34 @@ def write_log(message, filename=SERVER_LOG_FILE, date_format=LOG_DATE_FORMAT, da
 
 #simple light setting function to set light to daytime according to user presence
 #parameters: user_present, prev_user_present
-def light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, off, temperature, brightness):
-    if night_mode and not night_mode_set:
+def light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override, off, temperature, brightness):
+    if night_mode and not night_mode_set: #night mode on, always works
         lightcontrol.set_off()
         off = True
         write_log("night mode on, all lights off")
-    elif not night_mode and not night_mode_set and curtain and user_present:
+    elif not night_mode and not night_mode_set and curtain and user_present: #night mode off, always works
         temperature, brightness = lightcontrol.set_to_cur_time(init=True)
         off = False
         write_log("night mode off, all lights on")
-    elif user_present and not prev_user_present and curtain and not night_mode:
+    elif user_present and not prev_user_present and curtain and not night_mode: #user entered, always works
         temperature, brightness = lightcontrol.set_to_cur_time(init=True)
         off = False
         write_log("user entered, all lights on")
-    elif curtain and not prev_curtain and user_present and not night_mode:
+    elif curtain and not prev_curtain and user_present and not night_mode: #curtain closed, always works
         temperature, brightness = lightcontrol.set_to_cur_time(init=True)
         off = False
         write_log("curtains closed, all lights on")
-    elif not user_present and prev_user_present and not night_mode:
+    elif not user_present and prev_user_present and not night_mode: #user left, always works
         lightcontrol.set_off()
         off = True
         write_log("user left, all lights off")
-    elif not curtain and prev_curtain and not night_mode:
+    elif not curtain and prev_curtain and not night_mode and not override: #curtain opened, only when auto
         lightcontrol.set_off()
         off = True
         write_log("curtains opened, all lights off")
-    elif curtain and user_present and not night_mode:
-        lightcontrol.set_to_time(hour, minute)
+    elif curtain and user_present and not night_mode and not override: #time update, only when auto
+        temperature, brightness = lightcontrol.set_to_cur_time(init=True) #TODO: init does what except return things?
     return off, temperature, brightness
-
-def light_updater(hour, minute):
-    lightcontrol.set_to_time(hour, minute)
 
 #starts a thread running a function with some arguments, default not as daemon
 #parameters: function, arguments (tuple), as_daemon (bool)
@@ -117,6 +114,9 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
     
     light_level = -1
     prev_light_level = -1
+    
+    override = False
+    override_detected = 0
     
     lights_off = None
     lights_temp = None
@@ -168,6 +168,15 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
                 elif light_level < CURTAIN_THRESHHOLD:
                     curtain = True
             
+            elif "http:request_status" in command:
+                status = {'light_level':light_level, 'curtain':curtain,
+                          'temperature':temperature, 'night_mode':night_mode,
+                          'user_present':user_present, 'lights_temp':lights_temp
+                         }
+                if not lights_brightness is None:
+                    status['lights_brightness'] = round((lights_brightness/255)*100)
+                statusqueue.put(status)
+            
             elif "http:command" in command:
                 http_command = command[13:]
                 if http_command == "night_on":
@@ -181,20 +190,19 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
                     night_mode_set = False
                     day_event.set()
             
-            elif "http:request_status" in command:
-                status = {'light_level':light_level, 'curtain':curtain,
-                          'temperature':temperature, 'night_mode':night_mode,
-                          'user_present':user_present, 'lights_temp':lights_temp
-                         }
-                if not lights_brightness is None:
-                    status['lights_brightness'] = round((lights_brightness/255)*100)
-                statusqueue.put(status)
-
             #unimplemented or faulty commands
             else:
                 write_log("unknown command: {}".format(command))
             
-            lights_off, lights_temp, lights_brightness = light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, lights_off, lights_temp, lights_brightness)
+            if lightcontrol.is_override():
+                override_detected += 1 #about every 5 minutes, quicker if things change a lot
+                override = True
+            
+            if override_detected > 24: #after 2 hours we've had enough override
+                override = False
+                override_detected = 0
+            
+            lights_off, lights_temp, lights_brightness = light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override, lights_off, lights_temp, lights_brightness)
             night_mode_set = True
             
             commandqueue.task_done()
