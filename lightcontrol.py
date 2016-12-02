@@ -24,9 +24,9 @@ lightbytime = np.array([[datetime.time( 8,00), 3500, 255],
 
 def set_to_temp(temperature, brightness):
     for light in lights:
-        light.on(True)
-        light.colortemp_k(temperature)
-        light.brightness(brightness)
+        light.on = True
+        light.colortemp_k = temperature
+        light.brightness = brightness
     
     print("Lights set to {}K at brightness {}".format(temperature, brightness))
     
@@ -64,7 +64,7 @@ def is_override():
 
 def set_off():
     for light in lights:
-        light.on(False)
+        light.on = False
     print("Lights set to off")
 
 def sun_sim(hour, minute, init=False):
