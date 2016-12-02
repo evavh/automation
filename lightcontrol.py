@@ -24,17 +24,45 @@ lightbytime = np.array([[datetime.time( 8,00), 3500, 255],
 
 def set_to_temp(temperature, brightness):
     for light in lights:
-        light.on = True
-        light.colortemp_k = temperature
-        light.brightness = brightness
+        light.on(True)
+        light.colortemp_k(temperature)
+        light.brightness(brightness)
     
     print("Lights set to {}K at brightness {}".format(temperature, brightness))
     
     return temperature, brightness
 
+def if_auto_now():
+    timetocheck = datetime.time(hour, minute)
+    n_times = len(lightbytime[0])
+    
+    for (i, time) in enumerate(lightbytime[0]):
+        if timetocheck < time:
+            if timetocheck > lightbytime[0][i-1]:
+                temperature = lightbytime[1][i-1]
+                brightness = lightbytime[2][i-1]
+                return temperature, brightness
+    temperature = lightbytime[1][n_times-1]
+    brightness = lightbytime[2][n_times-1]
+    return temperature, brightness
+
+def is_auto_on():
+    all_off = True
+    for light in lights:
+        if light_on():
+            all_off = False
+        temperature, brightness = if_auto_now()
+        if light.colortemp_k() != temperature or light.brightness() != brightness:
+            return False #at least one light does not have auto's values -> not auto
+    if all_off:
+        return True #all lights are off, so we assume auto
+    else:
+        return False #some lights are on, others are not -> not auto
+            
+
 def set_off():
     for light in lights:
-        light.on = False
+        light.on(False)
     print("Lights set to off")
 
 def sun_sim(hour, minute, init=False):
@@ -48,15 +76,7 @@ def sun_sim(hour, minute, init=False):
         return temperature, brightness
     else:
         if init:
-            for (i, time) in enumerate(lightbytime[0]):
-                if timetocheck < time:
-                    if timetocheck > lightbytime[0][i-1]:
-                        temperature = lightbytime[1][i-1]
-                        brightness = lightbytime[2][i-1]
-                        return temperature, brightness
-            temperature = lightbytime[1][n_times-1]
-            brightness = lightbytime[2][n_times-1]
-            return temperature, brightness
+            return if_auto_now()
         else:
             return None
 
