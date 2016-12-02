@@ -33,6 +33,8 @@ def set_to_temp(temperature, brightness):
     return temperature, brightness
 
 def if_auto_now():
+    hour = datetime.datetime.now().hour
+    minute = datetime.datetime.now().minute
     timetocheck = datetime.time(hour, minute)
     n_times = len(lightbytime[0])
     
