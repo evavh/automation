@@ -116,7 +116,7 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
     prev_light_level = -1
     
     override = False
-    override_detected = 0
+    override_detected = 0 #counts number of times we have found the lights not on auto
     
     lights_off = None
     lights_temp = None
