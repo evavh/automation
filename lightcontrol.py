@@ -5,6 +5,7 @@ import random
 import time
 import datetime
 import numpy as np
+import math
 
 from phue import Bridge
 
@@ -52,9 +53,12 @@ def is_override():
     all_off = True
     for light in lights:
         if light.on:
+            print("light is on")
             all_off = False
         temperature, brightness = if_auto_now()
-        if light.colortemp_k != temperature or light.brightness != brightness:
+        lamp_temp = light.colortemp_k
+        lamp_bri = light.brightness
+        if lamp_temp-(lamp_temp%100) != temperature or abs(lamp_bri-brightness) > 3:
             return True #at least one light does not have auto's values -> not auto
     if all_off:
         return False #all lights are off, so we assume auto
