@@ -60,6 +60,7 @@ def write_log(message, filename=SERVER_LOG_FILE, date_format=LOG_DATE_FORMAT, da
 #simple light setting function to set light to daytime according to user presence
 #parameters: user_present, prev_user_present
 def light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override, off, temperature, brightness):
+    print(curtain, prev_curtain, night_mode, override)
     if night_mode and not night_mode_set: #night mode on, always works
         lightcontrol.set_off()
         off = True

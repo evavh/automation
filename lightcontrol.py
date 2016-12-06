@@ -50,21 +50,15 @@ def if_auto_now():
     return temperature, brightness
 
 def is_override():
-    all_off = True
     for light in lights:
         if light.on:
-            print("light is on")
-            all_off = False
-        temperature, brightness = if_auto_now()
-        lamp_temp = light.colortemp_k
-        lamp_bri = light.brightness
-        if lamp_temp-(lamp_temp%100) != temperature or abs(lamp_bri-brightness) > 3:
-            return True #at least one light does not have auto's values -> not auto
-    if all_off:
-        return False #all lights are off, so we assume auto
-    else:
-        return True #some lights are on, others are not -> not auto
-            
+            temperature, brightness = if_auto_now()
+            lamp_temp = light.colortemp_k
+            lamp_bri = light.brightness
+            print(lamp_temp, temperature, lamp_bri, brightness)
+            if abs(lamp_temp-temperature) > 100 or abs(lamp_bri-brightness) > 10:
+                return True #at least one light does not have auto's values -> not auto
+    return False
 
 def set_off():
     for light in lights:
