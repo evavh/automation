@@ -104,8 +104,13 @@ def startthread(function, arguments, as_daemon=False):
     new_thread = threading.Thread(target=function, args=arguments)
     new_thread.daemon = as_daemon
     new_thread.start()
-    write_log("thread for {} started".format(function.__name__))
 
+def thread_exception_handling(function):
+    try:
+        function
+    except:
+        pass
+        
 
 '''Main function'''
 
@@ -137,99 +142,95 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
     hour = datetime.now().hour
     minute = datetime.now().minute
     
-    try:
-        while True:        
-            command = commandqueue.get(block=True)
-            
-            #bluetooth checking: sets user_present
-            if "bluetooth:"+USER_NAME in command:
-                if "in" in command:
+    while True:
+        command = commandqueue.get(block=True)
+        
+        #bluetooth checking: sets user_present
+        if "bluetooth:"+USER_NAME in command:
+            if "in" in command:
+                prev_user_present = user_present
+                user_present = True
+                user_not_present_count = 0
+                user_event.set()
+            elif "out" in command:
+                user_not_present_count += 1
+                if user_not_present_count > present_thresh: #we are sure the user is gone
+                    user_event.clear()
                     prev_user_present = user_present
-                    user_present = True
-                    user_not_present_count = 0
-                    user_event.set()
-                elif "out" in command:
-                    user_not_present_count += 1
-                    if user_not_present_count > present_thresh: #we are sure the user is gone
-                        user_event.clear()
-                        prev_user_present = user_present
-                        user_present = False
-                    
-            
-            #time checking: sets new hour and minute
-            elif "time" in command:
-                hour = int(command[5:7])
-                minute = int(command[8:10])
-            
-            #sensor checking: sets temperature and light_level
-            elif "sensors:temp" in command:
-                temperature = float(command[13:])
-                year_month = datetime.now().strftime("%Y-%m")
-                write_log(str(temperature), filename=TEMP_LOG_FILE, date_format=None)
-                write_log(str(temperature), filename=TEMP_LOG_FILE+"_"+year_month, date_format=None)
-            
-            elif "sensors:light" in command:
-                light_level = int(command[14:])
-                prev_curtain = curtain
-                if light_level > CURTAIN_THRESHHOLD + 7:
-                    curtain = False
-                elif light_level < CURTAIN_THRESHHOLD:
-                    curtain = True
-            
-            elif "http:request_status" in command:
-                status = {'light_level':light_level, 'curtain':curtain,
-                          'temperature':temperature, 'night_mode':night_mode,
-                          'user_present':user_present, 'lights_temp':lights_temp
-                         }
-                if not lights_brightness is None:
-                    status['lights_brightness'] = round((lights_brightness/255)*100)
-                statusqueue.put(status)
-            
-            elif "http:command" in command:
-                http_command = command[13:]
-                if http_command == "night_on":
-                    prev_night_mode = night_mode
-                    night_mode = True
-                    night_mode_set = False
-                    day_event.clear()
-                elif http_command == "night_off":
-                    prev_night_mode = night_mode
-                    night_mode = False
-                    night_mode_set = False
-                    day_event.set()
-            
-            #unimplemented or faulty commands
-            else:
-                write_log("unknown command: {}".format(command))
-            
-            if lightcontrol.is_override(): #override detected
-                if not override: #start of override
-                    override_starttime = datetime.datetime.now()
-                    override = True
-            else: #auto detected
+                    user_present = False
+                
+        
+        #time checking: sets new hour and minute
+        elif "time" in command:
+            hour = int(command[5:7])
+            minute = int(command[8:10])
+        
+        #sensor checking: sets temperature and light_level
+        elif "sensors:temp" in command:
+            temperature = float(command[13:])
+            year_month = datetime.now().strftime("%Y-%m")
+            write_log(str(temperature), filename=TEMP_LOG_FILE, date_format=None)
+            write_log(str(temperature), filename=TEMP_LOG_FILE+"_"+year_month, date_format=None)
+        
+        elif "sensors:light" in command:
+            light_level = int(command[14:])
+            prev_curtain = curtain
+            if light_level > CURTAIN_THRESHHOLD + 7:
+                curtain = False
+            elif light_level < CURTAIN_THRESHHOLD:
+                curtain = True
+        
+        elif "http:request_status" in command:
+            status = {'light_level':light_level, 'curtain':curtain,
+                      'temperature':temperature, 'night_mode':night_mode,
+                      'user_present':user_present, 'lights_temp':lights_temp
+                     }
+            if not lights_brightness is None:
+                status['lights_brightness'] = round((lights_brightness/255)*100)
+            statusqueue.put(status)
+        
+        elif "http:command" in command:
+            http_command = command[13:]
+            if http_command == "night_on":
+                prev_night_mode = night_mode
+                night_mode = True
+                night_mode_set = False
+                day_event.clear()
+            elif http_command == "night_off":
+                prev_night_mode = night_mode
+                night_mode = False
+                night_mode_set = False
+                day_event.set()
+        
+        #unimplemented or faulty commands
+        else:
+            write_log("unknown command: {}".format(command))
+        
+        if lightcontrol.is_override(): #override detected
+            if not override: #start of override
+                override_starttime = datetime.datetime.now()
+                override = True
+        else: #auto detected
+            override = False
+        
+        #override timeout
+        if override:
+            if datetime.datetime.now() - override_starttime >= datetime.timedelta(hours=2):
                 override = False
-            
-            #override timeout
-            if override:
-                if datetime.datetime.now() - override_starttime >= datetime.timedelta(hours=2):
-                    override = False
-            
-            off_new, temp_new, bright_new = light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override)
-            if off_new:
-                lights_off = off_new
-            if temp_new:
-                lights_temp = temp_new
-            if bright_new:
-                lights_brightness = bright_new
-            
-            night_mode_set = True
-            
-            commandqueue.task_done()
-    except KeyboardInterrupt:
-        pass
-    except:
-        write_log("an exception occured: {}".format(sys.exc_info()))
-        raise
+        
+        off_new, temp_new, bright_new = light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override)
+        if off_new:
+            lights_off = off_new
+        if temp_new:
+            lights_temp = temp_new
+        if bright_new:
+            lights_brightness = bright_new
+        
+        night_mode_set = True
+        
+        commandqueue.task_done()
+    write_log("server stopped")
+    
 
 
 '''Thread functions'''
@@ -269,6 +270,7 @@ def bluetooth_function(commandqueue, day_event):
         dt = (end - start).total_seconds()
         if BLUETOOTH_RATE > dt:
             time.sleep(BLUETOOTH_RATE-dt)
+        
 
 def temp_sensor_function(commandqueue):
     while True:
@@ -299,6 +301,7 @@ def light_sensor_function(commandqueue, user_event, day_event):
             time.sleep(LIGHT_SENSOR_RATE-dt)
 
 if __name__ == '__main__':
+    write_log("starting server")
     commandqueue = Queue()
     statusqueue = Queue()
     
