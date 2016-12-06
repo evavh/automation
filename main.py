@@ -46,7 +46,6 @@ CURTAIN_THRESHHOLD = int(config['sensors']['curtain_threshhold'])
 #writes <formatted date>\t<message>\n to log file <filename>
 #parameters: date, filename, message
 def write_log(message, filename=SERVER_LOG_FILE, date_format=LOG_DATE_FORMAT, date=None):
-    print("{}: {}".format(filename, message))
     if date is None:
         date = datetime.now()
     with open(os.path.join(this_file, "logs", filename), 'a') as f:
@@ -59,11 +58,12 @@ def write_log(message, filename=SERVER_LOG_FILE, date_format=LOG_DATE_FORMAT, da
 
 #simple light setting function to set light to daytime according to user presence
 #parameters: user_present, prev_user_present
-def light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override, off, temperature, brightness):
-    print(curtain, prev_curtain, night_mode, override)
+def light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override):
     if night_mode and not night_mode_set: #night mode on, always works
         lightcontrol.set_off()
         off = True
+        temperature = None
+        brightness = None
         write_log("night mode on, all lights off")
     elif not night_mode and not night_mode_set and curtain and user_present: #night mode off, always works
         temperature, brightness = lightcontrol.set_to_cur_time(init=True)
@@ -80,13 +80,22 @@ def light_setter(hour, minute, user_present, prev_user_present, curtain, prev_cu
     elif not user_present and prev_user_present and not night_mode: #user left, always works
         lightcontrol.set_off()
         off = True
+        temperature = None
+        brightness = None
         write_log("user left, all lights off")
     elif not curtain and prev_curtain and not night_mode and not override: #curtain opened, only when auto
         lightcontrol.set_off()
         off = True
+        temperature = None
+        brightness = None
         write_log("curtains opened, all lights off")
     elif curtain and user_present and not night_mode and not override: #time update, only when auto
+        off = False
         temperature, brightness = lightcontrol.set_to_cur_time(init=True) #TODO: init does what except return things?
+    else:
+        off = None
+        temperature = None
+        brightness = None
     return off, temperature, brightness
 
 #starts a thread running a function with some arguments, default not as daemon
@@ -151,7 +160,6 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
             elif "time" in command:
                 hour = int(command[5:7])
                 minute = int(command[8:10])
-                print(hour, minute)
             
             #sensor checking: sets temperature and light_level
             elif "sensors:temp" in command:
@@ -162,7 +170,6 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
             
             elif "sensors:light" in command:
                 light_level = int(command[14:])
-                write_log(str(light_level), filename=LIGHT_LOG_FILE, date_format=None)
                 prev_curtain = curtain
                 if light_level > CURTAIN_THRESHHOLD + 7:
                     curtain = False
@@ -195,22 +202,33 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
             else:
                 write_log("unknown command: {}".format(command))
             
-            if lightcontrol.is_override():
-                override_detected += 1 #about every 5 minutes, quicker if things change a lot
-                override = True
-            
-            if override_detected > 24: #after 2 hours we've had enough override
+            if lightcontrol.is_override(): #override detected
+                if not override: #start of override
+                    override_starttime = datetime.datetime.now()
+                    override = True
+            else: #auto detected
                 override = False
-                override_detected = 0
             
-            lights_off, lights_temp, lights_brightness = light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override, lights_off, lights_temp, lights_brightness)
+            #override timeout
+            if override:
+                if datetime.datetime.now() - override_starttime >= datetime.timedelta(hours=2):
+                    override = False
+            
+            off_new, temp_new, bright_new = light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override)
+            if off_new:
+                lights_off = off_new
+            if temp_new:
+                lights_temp = temp_new
+            if bright_new:
+                lights_brightness = bright_new
+            
             night_mode_set = True
             
             commandqueue.task_done()
     except KeyboardInterrupt:
         pass
     except:
-        write_log("an exception occured: {}".format(sys.exc_info()[0]))
+        write_log("an exception occured: {}".format(sys.exc_info()))
         raise
 
 

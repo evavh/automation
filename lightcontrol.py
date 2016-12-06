@@ -29,8 +29,6 @@ def set_to_temp(temperature, brightness):
         light.colortemp_k = temperature
         light.brightness = brightness
     
-    print("Lights set to {}K at brightness {}".format(temperature, brightness))
-    
     return temperature, brightness
 
 def if_auto_now():
@@ -55,7 +53,6 @@ def is_override():
             temperature, brightness = if_auto_now()
             lamp_temp = light.colortemp_k
             lamp_bri = light.brightness
-            print(lamp_temp, temperature, lamp_bri, brightness)
             if abs(lamp_temp-temperature) > 100 or abs(lamp_bri-brightness) > 10:
                 return True #at least one light does not have auto's values -> not auto
     return False
@@ -63,7 +60,6 @@ def is_override():
 def set_off():
     for light in lights:
         light.on = False
-    print("Lights set to off")
 
 def sun_sim(hour, minute, init=False):
     timetocheck = datetime.time(hour, minute)

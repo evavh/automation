@@ -56,4 +56,4 @@ def http_function(commandqueue, statusqueue):
         pass
 
     my_server.server_close()
-    print("server stopped")
+    print("http server stopped")
