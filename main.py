@@ -13,7 +13,7 @@ import threading
 
 from subprocess import check_output
 from queue import Queue
-from datetime import datetime
+import datetime
 
 import lightcontrol
 import tsl2561
@@ -47,7 +47,7 @@ CURTAIN_THRESHHOLD = int(config['sensors']['curtain_threshhold'])
 #parameters: date, filename, message
 def write_log(message, filename=SERVER_LOG_FILE, date_format=LOG_DATE_FORMAT, date=None):
     if date is None:
-        date = datetime.now()
+        date = datetime.datetime.now()
     with open(os.path.join(this_file, "logs", filename), 'a') as f:
         if date_format is None:
             f.write("{}\t{}\n".format(time.time(), message))
@@ -139,8 +139,8 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
     
     http_command = None
     
-    hour = datetime.now().hour
-    minute = datetime.now().minute
+    hour = datetime.datetime.now().hour
+    minute = datetime.datetime.now().minute
     
     while True:
         command = commandqueue.get(block=True)
@@ -168,7 +168,7 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
         #sensor checking: sets temperature and light_level
         elif "sensors:temp" in command:
             temperature = float(command[13:])
-            year_month = datetime.now().strftime("%Y-%m")
+            year_month = datetime.datetime.now().strftime("%Y-%m")
             write_log(str(temperature), filename=TEMP_LOG_FILE, date_format=None)
             write_log(str(temperature), filename=TEMP_LOG_FILE+"_"+year_month, date_format=None)
         
@@ -241,12 +241,12 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
 #config: rate
 def time_function(commandqueue):
     while True:
-        hour = datetime.now().hour
-        minute = datetime.now().minute
+        hour = datetime.datetime.now().hour
+        minute = datetime.datetime.now().minute
         time.sleep((TIME_RATE - (minute % TIME_RATE)) * 60)
-        cur_time = datetime.now().strftime("%H:%M")
-        hour = datetime.now().hour
-        minute = datetime.now().minute
+        cur_time = datetime.datetime.now().strftime("%H:%M")
+        hour = datetime.datetime.now().hour
+        minute = datetime.datetime.now().minute
         command = "time:{}".format(cur_time)
         commandqueue.put(command)
 
@@ -258,7 +258,7 @@ def bluetooth_function(commandqueue, day_event):
     while True:
         day_event.wait()
         
-        start = datetime.now()
+        start = datetime.datetime.now()
         name = check_output(["hcitool", "name", USER_MAC]).decode("utf-8")[:-1]
         
         if name == USER_NAME:
@@ -266,7 +266,7 @@ def bluetooth_function(commandqueue, day_event):
         else:
             commandqueue.put("bluetooth:{}:out".format(USER_NAME))
         
-        end = datetime.now()
+        end = datetime.datetime.now()
         dt = (end - start).total_seconds()
         if BLUETOOTH_RATE > dt:
             time.sleep(BLUETOOTH_RATE-dt)
@@ -274,12 +274,12 @@ def bluetooth_function(commandqueue, day_event):
 
 def temp_sensor_function(commandqueue):
     while True:
-        start = datetime.now()
+        start = datetime.datetime.now()
 
         temperature = round(temp_sensor.read_temp(), 1)
         commandqueue.put("sensors:temp:{}".format(temperature))
         
-        end = datetime.now()
+        end = datetime.datetime.now()
         dt = (end - start).total_seconds()
         if TEMP_SENSOR_RATE > dt:
             time.sleep(TEMP_SENSOR_RATE-dt)
@@ -290,12 +290,12 @@ def light_sensor_function(commandqueue, user_event, day_event):
         user_event.wait()
         day_event.wait()
         
-        start = datetime.now()
+        start = datetime.datetime.now()
         
         light = int(tsl.lux())
         commandqueue.put("sensors:light:{}".format(light))
         
-        end = datetime.now()
+        end = datetime.datetime.now()
         dt = (end - start).total_seconds()
         if LIGHT_SENSOR_RATE > dt:
             time.sleep(LIGHT_SENSOR_RATE-dt)
