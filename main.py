@@ -73,7 +73,7 @@ def light_setter(hour, minute, user_present, prev_user_present, curtain, prev_cu
         temperature, brightness = lightcontrol.set_to_cur_time(init=True)
         off = False
         write_log("user entered, all lights on")
-    elif curtain and not prev_curtain and user_present and not night_mode: #curtain closed, always works
+    elif curtain and not prev_curtain and user_present and not night_mode and not override: #curtain closed, only when auto
         temperature, brightness = lightcontrol.set_to_cur_time(init=True)
         off = False
         write_log("curtains closed, all lights on")
@@ -210,13 +210,17 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
             if not override: #start of override
                 override_starttime = datetime.datetime.now()
                 override = True
+                write_log("override mode enabled")
         else: #auto detected
-            override = False
+            if override: #a change
+                override = False
+                write_log("override mode disabled")
         
         #override timeout
         if override:
             if datetime.datetime.now() - override_starttime >= datetime.timedelta(hours=2):
                 override = False
+                write_log("override timed out")
         
         off_new, temp_new, bright_new = light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override)
         if off_new:
