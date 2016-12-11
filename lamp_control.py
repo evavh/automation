@@ -2,12 +2,16 @@
 
 #contains the functions for sun simulation and other interactions
 #with the hue system
+#temp is colour temperature, bright is brightness
 
 import datetime
 import numpy
 import phue
+from parsed_config import config
 
-BRIDGE = phue.Bridge('192.168.0.100')
+BRIDGE_IP = config['hue']['BRIDGE_IP']
+
+BRIDGE = phue.Bridge(BRIDGE_IP)
 LIGHTS = BRIDGE.get_light_objects()
 
 light_by_time = numpy.array([[datetime.time( 8,00), 3500, 255],
@@ -20,10 +24,10 @@ light_by_time = numpy.array([[datetime.time( 8,00), 3500, 255],
                           [datetime.time(23,00), 2000,  50]]).transpose().tolist()
 
 def set_to_temp(temp, bright):
-    for light in LIGHTS:
-        light.on = True
-        light.colortemp_k = temp
-        light.brightness = bright
+    for lamp in LIGHTS:
+        lamp.on = True
+        lamp.colortemp_k = temp
+        lamp.brightness = bright
     
     return temp, bright
 
@@ -33,9 +37,9 @@ def auto_value_at_time(time_to_check):
     for (i, time) in enumerate(light_by_time[0]):
         if time_to_check < time:
             if time_to_check > light_by_time[0][i-1]:
-                temperature = light_by_time[1][i-1]
-                brightness = light_by_time[2][i-1]
-                return temperature, brightness
+                temp = light_by_time[1][i-1]
+                bright = light_by_time[2][i-1]
+                return temp, bright
     temp = light_by_time[1][n_times-1]
     bright = light_by_time[2][n_times-1]
     return temp, bright
@@ -44,18 +48,18 @@ def is_override():
     hour = datetime.datetime.now().hour
     minute = datetime.datetime.now().minute
     time_to_check = datetime.time(hour, minute)
-    for light in LIGHTS:
-        if light.on:
+    for lamp in LIGHTS:
+        if lamp.on:
             auto_temp, auto_bright = auto_value_at_time(time_to_check)
-            lamp_temp = light.colortemp_k
-            lamp_bright = light.brightness
+            lamp_temp = lamp.colortemp_k
+            lamp_bright = lamp.brightness
             if abs(lamp_temp-auto_temp) > 100 or abs(lamp_bright-auto_bright) > 10:
-                return True #at least one light does not have auto's values -> not auto
+                return True #at least one lamp does not have auto's values -> not auto
     return False
 
 def set_off():
-    for light in LIGHTS:
-        light.on = False
+    for lamp in LIGHTS:
+        lamp.on = False
 
 #returns None if no change is required, otherwise temp, bright for current time
 def sun_sim(init=False):

@@ -2,29 +2,25 @@
 
 #the main file, consisting of a loop that reads out the command queue
 #and status queue, which are filled by several threads also started
-#through this file. Also contains the light setter (a big if statement)
+#through this file. Also contains the lamp setter (a big if statement)
 #and sensor functions
 
-import configparser
 import time
-import os
 import sys
 import threading
 import datetime
+import os
 
 from subprocess import check_output
 from queue import Queue
 
-import lightcontrol
+import lamp_control
 import tsl2561
 import temp_sensor
 import http_commands
 
 '''Reading configuration'''
-
-this_file = os.path.dirname(__file__)
-config = configparser.RawConfigParser()
-config.read(os.path.join(this_file, "config", "main_config.ini"))
+from parsed_config import config
 
 USER_MAC = config['bluetooth']['USER_MAC']
 USER_NAME = config['bluetooth']['USER_NAME']
@@ -37,13 +33,15 @@ TIME_RATE = int(config['rates']['TIME'])
 CURTAIN_THRESHOLD = int(config['thresholds']['CURTAIN'])
 PRESENT_THRESHOLD = int(config['thresholds']['PRESENT'])
 
+THIS_FILE = os.path.dirname(__file__)
+
 '''Helper functions'''
 
 #writes <formatted date>\t<message>\n to log file <filename>
 #parameters: date, filename, message
 def write_log(message, filename="server_log", date_format=True):
     date = datetime.datetime.now()
-    with open(os.path.join(this_file, "logs", filename), 'a') as f:
+    with open(os.path.join(THIS_FILE, "logs", filename), 'a') as f:
         if date_format is False:
             f.write("{}\t{}\n".format(time.time(), message))
         else:
@@ -51,47 +49,47 @@ def write_log(message, filename="server_log", date_format=True):
             f.write("{}\t{}\n".format(date_string, message))
         f.close()
 
-#simple light setting function to set light to daytime according to user presence
+#simple lamp setting function to set lamps to daytime according to user presence
 #parameters: user_present, prev_user_present
-def light_setter(present, prev_present, curtain, prev_curtain, night_mode, night_mode_set, override):
+def lamp_setter(present, prev_present, curtain, prev_curtain, night_mode, night_mode_set, override):
     if night_mode and not night_mode_set: #night mode on, always works
-        lightcontrol.set_off()
+        lamp_control.set_off()
         new_off = True
-        new_temp = None
+        new_colour = None
         new_bright = None
-        write_log("night mode on, all lights off")
+        write_log("night mode on, all lamps off")
     elif not night_mode and not night_mode_set and curtain and present: #night mode off, always works
-        new_temp, new_bright = lightcontrol.set_to_cur_time(init=True)
+        new_colour, new_bright = lamp_control.set_to_cur_time(init=True)
         new_off = False
-        write_log("night mode off, all lights on")
+        write_log("night mode off, all lamps on")
     elif present and not prev_present and curtain and not night_mode: #user entered, always works
-        new_temp, new_bright = lightcontrol.set_to_cur_time(init=True)
+        new_colour, new_bright = lamp_control.set_to_cur_time(init=True)
         new_off = False
-        write_log("user entered, all lights on")
+        write_log("user entered, all lamps on")
     elif curtain and not prev_curtain and present and not night_mode and not override: #curtain closed, only when auto
-        new_temp, new_bright = lightcontrol.set_to_cur_time(init=True)
+        new_colour, new_bright = lamp_control.set_to_cur_time(init=True)
         new_off = False
-        write_log("curtains closed, all lights on")
+        write_log("curtains closed, all lamps on")
     elif not present and prev_present and not night_mode: #user left, always works
-        lightcontrol.set_off()
+        lamp_control.set_off()
         new_off = True
-        new_temp = None
+        new_colour = None
         new_bright = None
-        write_log("user left, all lights off")
+        write_log("user left, all lamps off")
     elif not curtain and prev_curtain and not night_mode and not override: #curtain opened, only when auto
-        lightcontrol.set_off()
+        lamp_control.set_off()
         new_off = True
-        new_temp = None
+        new_colour = None
         new_bright = None
-        write_log("curtains opened, all lights off")
+        write_log("curtains opened, all lamps off")
     elif curtain and present and not night_mode and not override: #time update, only when auto
         new_off = False
-        new_temp, new_bright = lightcontrol.set_to_cur_time(init=False)
+        new_colour, new_bright = lamp_control.set_to_cur_time(init=False)
     else:
         new_off = None
-        new_temp = None
+        new_colour = None
         new_bright = None
-    return new_off, new_temp, new_bright
+    return new_off, new_colour, new_bright
 
 #starts a thread running a function with some arguments, default not as daemon
 #parameters: function, arguments (tuple), as_daemon (bool)
@@ -126,11 +124,11 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
     prev_light_level = -1
     
     override = False
-    override_detected = 0 #counts number of times we have found the lights not on auto
+    override_detected = 0 #counts number of times we have found the lamps not on auto
     
-    lights_off = None
-    lights_temp = None
-    lights_brightness = None
+    lamps_off = None
+    lamps_colour = None
+    lamps_brightness = None
     
     http_command = None
     
@@ -160,12 +158,12 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
             hour = int(command[5:7])
             minute = int(command[8:10])
         
-        #sensor checking: sets temperature and light_level
+        #sensor checking: sets temp and light_level
         elif "sensors:temp" in command:
-            temperature = float(command[13:])
+            temp = float(command[13:])
             year_month = datetime.datetime.now().strftime("%Y-%m")
-            write_log(str(temperature), filename="temp_log", date_format=None)
-            write_log(str(temperature), filename="temp_log"+"_"+year_month, date_format=None)
+            write_log(str(temp), filename="temp_log", date_format=None)
+            write_log(str(temp), filename="temp_log"+"_"+year_month, date_format=None)
         
         elif "sensors:light" in command:
             light_level = int(command[14:])
@@ -177,11 +175,12 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         
         elif "http:request_status" in command:
             status = {'light_level':light_level, 'curtain':curtain,
-                      'temperature':temperature, 'night_mode':night_mode,
-                      'user_present':present, 'lights_temp':lights_temp
+                      'temp':temp, 'night_mode':night_mode,
+                      'user_present':present, 'lamps_colour':lamps_colour,
+                      'lamps_brightness':None
                      }
-            if not lights_brightness is None:
-                status['lights_brightness'] = round((lights_brightness/255)*100)
+            if not lamps_bright is None:
+                status['lamps_brightness'] = round((lamps_bright/255)*100)
             statusqueue.put(status)
         
         elif "http:command" in command:
@@ -201,7 +200,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         else:
             write_log("unknown command: {}".format(command))
         
-        if lightcontrol.is_override(): #override detected
+        if lamp_control.is_override(): #override detected
             if not override: #start of override
                 override_starttime = datetime.datetime.now()
                 override = True
@@ -217,13 +216,13 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
                 override = False
                 write_log("override timed out")
         
-        new_off, new_temp, new_bright = light_setter(present, prev_present, curtain, prev_curtain, night_mode, night_mode_set, override)
+        new_off, new_colour, new_bright = lamp_setter(present, prev_present, curtain, prev_curtain, night_mode, night_mode_set, override)
         if new_off:
-            lights_off = new_off
-        if new_temp:
-            lights_temp = new_temp
+            lamps_off = new_off
+        if new_colour:
+            lamps_colour = new_colour
         if new_bright:
-            lights_brightness = new_bright
+            lamps_brightness = new_bright
         
         night_mode_set = True
         
@@ -275,8 +274,8 @@ def temp_sensor_function(commandqueue):
     while True:
         start = datetime.datetime.now()
 
-        temperature = round(temp_sensor.read_temp(), 1)
-        commandqueue.put("sensors:temp:{}".format(temperature))
+        temp = round(temp_sensor.read_temp(), 1)
+        commandqueue.put("sensors:temp:{}".format(temp))
         
         end = datetime.datetime.now()
         dt = (end - start).total_seconds()

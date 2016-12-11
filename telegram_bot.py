@@ -4,20 +4,16 @@ import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import ssl
 import json
-import datetime
-import os
-import configparser
 
-this_file = os.path.dirname(__file__)
-config = configparser.RawConfigParser()
-config.read(os.path.join(this_file, "config", "main_config.ini"))
+'''Reading configuration'''
+import parsed_config
 
 TOKEN = config['telegram']['TOKEN']
 URL = config['telegram']['URL']
 PORT = int(config['telegram']['PORT'])
 
+#enable the webhook and upload the certificate 
 def enableWebhook():
-#   enable the webhook and upload the certificate 
     params = {'url': URL+':'+str(PORT)+'/'}
     r = requests.get("https://api.telegram.org/bot"+TOKEN+"/setWebhook", 
                       params=params,
@@ -41,24 +37,14 @@ def messageInfo(message):
     
     print("<"+chat_name+"> "+from_name+": "+text, end='\n')
 
-def debugMessage(result):
-    messageInfo(result['message'])
-    print('recieved message send to telegram on/at: ',end="")
-    print(datetime.datetime.fromtimestamp(int(result['message']['date'])
-                          ).strftime('%Y-%m-%d %H:%M:%S'))
-
-    print('full json dict:\n'+str(result))
-
-def genHttpClass():
+def generate_handler():
 #   used to pass above vars to myhandler class in a way that works..... je zet
 #   eigl de vars in de scope van de class en daarom werky, soort constructor
-    class MyHandler(BaseHTTPRequestHandler):
+    class my_handler(BaseHTTPRequestHandler):
     #   check http get requests and start the corresponding functions
         def do_POST(self):
-            print("post received")
             #reply data recieved succesfully (otherwise endless spam)
             message = json.dumps({})
-            print(message)
             self.send_response(200)
             self.send_header('Content-type','application/json')
             self.end_headers()
@@ -70,15 +56,14 @@ def genHttpClass():
             post_body_str = post_body.decode("utf-8")
             data = json.loads(post_body_str)
             
-            debugMessage(data)
+            messageInfo(data['message'])
             
             return
-    return MyHandler
+    return my_handler
     
-def HttpRecieveServer():
+def start_server():
     enableWebhook()
-    botServer = HTTPServer(("", PORT), 
-                            genHttpClass())
+    botServer = HTTPServer(("", PORT), generate_handler())
     botServer.socket = ssl.wrap_socket(botServer.socket, 
                        certfile='config/PUBLIC.pem',
                        keyfile='config/PRIVATE.key',
@@ -91,4 +76,4 @@ def HttpRecieveServer():
     botServer.server_close()
 
 if __name__ == '__main__':
-    HttpRecieveServer()
+    start_server()

@@ -6,19 +6,16 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import time
 import cgi
 import json
-import configparser
-import os
 
-'''Loading config'''
-this_file = os.path.dirname(__file__)
-config = configparser.RawConfigParser()
-config.read(os.path.join(this_file, "config", "main_config.ini"))
+'''Reading configuration'''
+from parsed_config import config
 
 if 'HOST_NAME' in config['http']:
     HOST_NAME = config['http']['HOST_NAME']
 else:
     HOST_NAME = ""
 HOST_PORT = int(config['http']['PORT'])
+
 
 def MakeHandlerClass(commandqueue, statusqueue):
     class MyHandler(BaseHTTPRequestHandler):
