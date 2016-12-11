@@ -5,11 +5,21 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import ssl
 import json
 import datetime
+import os
+import configparser
+
+this_file = os.path.dirname(__file__)
+config = configparser.RawConfigParser()
+config.read(os.path.join(this_file, "config", "main_config.ini"))
+
+TOKEN = config['telegram']['TOKEN']
+URL = config['telegram']['URL']
+PORT = int(config['telegram']['PORT'])
 
 def enableWebhook():
 #   enable the webhook and upload the certificate 
-    params = {'url': 'https://informaticavia.duckdns.org:8443/'}
-    r = requests.get("https://api.telegram.org/bot"+config.token+"/setWebhook", 
+    params = {'url': URL+':'+str(PORT)+'/'}
+    r = requests.get("https://api.telegram.org/bot"+TOKEN+"/setWebhook", 
                       params=params,
                       files={'certificate' : open('config/PUBLIC.pem', 'r')})
     print("server replies:",r.json())
@@ -45,8 +55,10 @@ def genHttpClass():
     class MyHandler(BaseHTTPRequestHandler):
     #   check http get requests and start the corresponding functions
         def do_POST(self):
+            print("post received")
             #reply data recieved succesfully (otherwise endless spam)
             message = json.dumps({})
+            print(message)
             self.send_response(200)
             self.send_header('Content-type','application/json')
             self.end_headers()
@@ -63,10 +75,9 @@ def genHttpClass():
             return
     return MyHandler
     
-def HttpRecieveServer(tasksQueue, resourceLocks, sensorGet, sensorGetBack,
-                      sensorRequest, analysisRq, lightSceneQueue):
+def HttpRecieveServer():
     enableWebhook()
-    botServer = HTTPServer(("192.168.0.111", 8443), 
+    botServer = HTTPServer(("", PORT), 
                             genHttpClass())
     botServer.socket = ssl.wrap_socket(botServer.socket, 
                        certfile='config/PUBLIC.pem',
@@ -78,3 +89,6 @@ def HttpRecieveServer(tasksQueue, resourceLocks, sensorGet, sensorGetBack,
     except KeyboardInterrupt:
         pass
     botServer.server_close()
+
+if __name__ == '__main__':
+    HttpRecieveServer()
