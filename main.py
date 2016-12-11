@@ -10,17 +10,15 @@ import time
 import os
 import sys
 import threading
+import datetime
 
 from subprocess import check_output
 from queue import Queue
-import datetime
 
 import lightcontrol
 import tsl2561
 import temp_sensor
 import http_commands
-
-present_thresh = 3
 
 '''Reading configuration'''
 
@@ -28,28 +26,25 @@ this_file = os.path.dirname(__file__)
 config = configparser.RawConfigParser()
 config.read(os.path.join(this_file, "config", "main_config.ini"))
 
-LOG_DATE_FORMAT = str(config['defaults']['LOG_DATE_FORMAT'])
-USER_NAME = config['bluetooth']['USER_NAME']
 USER_MAC = config['bluetooth']['USER_MAC']
-BLUETOOTH_RATE = int(config['bluetooth']['BLUETOOTH_RATE'])
-TIME_RATE = int(config['time']['TIME_RATE'])
-TEMP_SENSOR_RATE = int(config['sensors']['TEMP_SENSOR_RATE'])
-LIGHT_SENSOR_RATE = int(config['sensors']['LIGHT_SENSOR_RATE'])
-TEMP_LOG_FILE = config['sensor_log']['TEMP_LOG_FILE']
-LIGHT_LOG_FILE = config['sensor_log']['LIGHT_LOG_FILE']
+USER_NAME = config['bluetooth']['USER_NAME']
 
-SERVER_LOG_FILE = config['defaults']['server_log_file']
-CURTAIN_THRESHHOLD = int(config['sensors']['curtain_threshhold'])
+BLUETOOTH_RATE = int(config['rates']['BLUETOOTH'])
+LIGHT_SENSOR_RATE = int(config['rates']['LIGHT_SENSOR'])
+TEMP_SENSOR_RATE = int(config['rates']['TEMP_SENSOR'])
+TIME_RATE = int(config['rates']['TIME'])
+
+CURTAIN_THRESHOLD = int(config['thresholds']['CURTAIN'])
+PRESENT_THRESHOLD = int(config['thresholds']['PRESENT'])
 
 '''Helper functions'''
 
 #writes <formatted date>\t<message>\n to log file <filename>
 #parameters: date, filename, message
-def write_log(message, filename=SERVER_LOG_FILE, date_format=LOG_DATE_FORMAT, date=None):
-    if date is None:
-        date = datetime.datetime.now()
+def write_log(message, filename="server_log", date_format=True):
+    date = datetime.datetime.now()
     with open(os.path.join(this_file, "logs", filename), 'a') as f:
-        if date_format is None:
+        if date_format is False:
             f.write("{}\t{}\n".format(time.time(), message))
         else:
             date_string = date.strftime("%Y-%m-%d %H:%M:%S")
@@ -154,7 +149,7 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
                 user_event.set()
             elif "out" in command:
                 user_not_present_count += 1
-                if user_not_present_count > present_thresh: #we are sure the user is gone
+                if user_not_present_count > PRESENT_THRESHOLD: #we are sure the user is gone
                     user_event.clear()
                     prev_user_present = user_present
                     user_present = False
@@ -169,15 +164,15 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
         elif "sensors:temp" in command:
             temperature = float(command[13:])
             year_month = datetime.datetime.now().strftime("%Y-%m")
-            write_log(str(temperature), filename=TEMP_LOG_FILE, date_format=None)
-            write_log(str(temperature), filename=TEMP_LOG_FILE+"_"+year_month, date_format=None)
+            write_log(str(temperature), filename="temp_log", date_format=None)
+            write_log(str(temperature), filename="temp_log"+"_"+year_month, date_format=None)
         
         elif "sensors:light" in command:
             light_level = int(command[14:])
             prev_curtain = curtain
-            if light_level > CURTAIN_THRESHHOLD + 7:
+            if light_level > CURTAIN_THRESHOLD + 7:
                 curtain = False
-            elif light_level < CURTAIN_THRESHHOLD:
+            elif light_level < CURTAIN_THRESHOLD:
                 curtain = True
         
         elif "http:request_status" in command:
