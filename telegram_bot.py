@@ -6,42 +6,30 @@ import ssl
 import json
 
 '''Reading configuration'''
-import parsed_config
+from parsed_config import config
 
+if 'HOST_NAME' in config['http']:
+    HOST_NAME = config['http']['HOST_NAME']
+else:
+    HOST_NAME = ""
 TOKEN = config['telegram']['TOKEN']
 URL = config['telegram']['URL']
 PORT = int(config['telegram']['PORT'])
 
+
 #enable the webhook and upload the certificate 
-def enableWebhook():
+def init_webhook():
     params = {'url': URL+':'+str(PORT)+'/'}
     r = requests.get("https://api.telegram.org/bot"+TOKEN+"/setWebhook", 
                       params=params,
                       files={'certificate' : open('config/PUBLIC.pem', 'r')})
     print("server replies:",r.json())
 
-def messageInfo(message):
-    from_name = message['from']['first_name']
-    
-    if 'title' in message['chat']:
-        chat_name = message['chat']['title']
-    elif 'username' in message['chat']:
-        chat_name = "@"+message['chat']['username']
-    else:
-        chat_name = "?"
-    
-    if 'text' in message.keys():
-        text = message['text']
-    else:
-        text = 'no text was given'
-    
-    print("<"+chat_name+"> "+from_name+": "+text, end='\n')
-
-def generate_handler():
-#   used to pass above vars to myhandler class in a way that works..... je zet
-#   eigl de vars in de scope van de class en daarom werky, soort constructor
+def generate_handler(telegramqueue):
+    #used to pass above vars to myhandler class in a way that works..... je zet
+    #eigl de vars in de scope van de class en daarom werky, soort constructor
     class my_handler(BaseHTTPRequestHandler):
-    #   check http get requests and start the corresponding functions
+        #check http get requests and start the corresponding functions
         def do_POST(self):
             #reply data recieved succesfully (otherwise endless spam)
             message = json.dumps({})
@@ -56,24 +44,27 @@ def generate_handler():
             post_body_str = post_body.decode("utf-8")
             data = json.loads(post_body_str)
             
-            messageInfo(data['message'])
+            if telegramqueue:
+                telegramqueue.put(data)
+            else:
+                print(data)
             
             return
     return my_handler
     
-def start_server():
-    enableWebhook()
-    botServer = HTTPServer(("", PORT), generate_handler())
-    botServer.socket = ssl.wrap_socket(botServer.socket, 
-                       certfile='config/PUBLIC.pem',
-                       keyfile='config/PRIVATE.key',
-                       server_side=True)
+def bot_server_function(telegramqueue=None):
+    init_webhook()
+    bot_server = HTTPServer((HOST_NAME, PORT), generate_handler(telegramqueue))
+    bot_server.socket = ssl.wrap_socket(bot_server.socket, 
+                                        certfile='config/PUBLIC.pem',
+                                        keyfile='config/PRIVATE.key',
+                                        server_side=True)
     try:
-        print("starting botServer")
-        botServer.serve_forever()
+        print("starting telegram bot server")
+        bot_server.serve_forever()
     except KeyboardInterrupt:
         pass
-    botServer.server_close()
+    bot_server.server_close()
 
 if __name__ == '__main__':
-    start_server()
+    bot_server_function()

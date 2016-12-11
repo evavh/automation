@@ -18,6 +18,7 @@ import lamp_control
 import tsl2561
 import temp_sensor
 import http_commands
+import telegram_bot
 
 '''Reading configuration'''
 from parsed_config import config
@@ -176,11 +177,11 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         elif "http:request_status" in command:
             status = {'light_level':light_level, 'curtain':curtain,
                       'temp':temp, 'night_mode':night_mode,
-                      'user_present':present, 'lamps_colour':lamps_colour,
-                      'lamps_brightness':None
+                      'present':present, 'lamps_colour':lamps_colour,
+                      'lamps_bright':None
                      }
-            if not lamps_bright is None:
-                status['lamps_brightness'] = round((lamps_bright/255)*100)
+            if lamps_bright:
+                status['lamps_bright'] = round((lamps_bright/255)*100)
             statusqueue.put(status)
         
         elif "http:command" in command:
@@ -302,6 +303,7 @@ if __name__ == '__main__':
     write_log("starting server")
     commandqueue = Queue()
     statusqueue = Queue()
+    telegramqueue = Queue()
     
     present_event = threading.Event()
     present_event.set()
@@ -310,11 +312,15 @@ if __name__ == '__main__':
     day_event.set()
     
     start_thread(main_function, (commandqueue, statusqueue, present_event, day_event), False)
-    start_thread(http_commands.http_function, (commandqueue, statusqueue), True)
+    
     start_thread(time_function, (commandqueue,), True)
     start_thread(bluetooth_function, (commandqueue, day_event), True)
     start_thread(temp_sensor_function, (commandqueue,), True)
     start_thread(light_sensor_function, (commandqueue, present_event, day_event), True)
     
+    start_thread(http_commands.http_function, (commandqueue, statusqueue), True)
+    start_thread(telegram_bot.bot_server_function, (telegramqueue,), True)
+    
     commandqueue.join()
     statusqueue.join()
+    telegramqueue.join()

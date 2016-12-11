@@ -14,11 +14,11 @@ if 'HOST_NAME' in config['http']:
     HOST_NAME = config['http']['HOST_NAME']
 else:
     HOST_NAME = ""
-HOST_PORT = int(config['http']['PORT'])
+PORT = int(config['http']['PORT'])
 
 
-def MakeHandlerClass(commandqueue, statusqueue):
-    class MyHandler(BaseHTTPRequestHandler):
+def generate_handler(commandqueue, statusqueue):
+    class my_handler(BaseHTTPRequestHandler):
         def do_GET(self):
             commandqueue.put("http:request_status")
             self.send_response(200)
@@ -52,10 +52,10 @@ def MakeHandlerClass(commandqueue, statusqueue):
             commandqueue.put("http:command:{}".format(command))
             
             path = self.path
-    return MyHandler
+    return my_handler
 
 def http_function(commandqueue, statusqueue):
-    my_server = HTTPServer((HOST_NAME, HOST_PORT), MakeHandlerClass(commandqueue, statusqueue))
+    my_server = HTTPServer((HOST_NAME, PORT), generate_handler(commandqueue, statusqueue))
     
     try:
           my_server.serve_forever()
