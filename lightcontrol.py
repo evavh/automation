@@ -1,88 +1,89 @@
+#!/usr/bin/python3
+
 #contains the functions for sun simulation and other interactions
 #with the hue system
 
-import random
-import time
 import datetime
-import numpy as np
-import math
+import numpy
+import phue
 
-from phue import Bridge
+BRIDGE = phue.Bridge('192.168.0.100')
+LIGHTS = BRIDGE.get_light_objects()
 
-bridge = Bridge('192.168.0.100')
+light_by_time = numpy.array([[datetime.time( 8,00), 3500, 255],
+                          [datetime.time(20,00), 3000, 255],
+                          [datetime.time(20,30), 3000, 255],
+                          [datetime.time(21,00), 2800, 255],
+                          [datetime.time(21,30), 2500, 200],
+                          [datetime.time(22,00), 2300, 150],
+                          [datetime.time(22,30), 2000, 100],
+                          [datetime.time(23,00), 2000,  50]]).transpose().tolist()
 
-lights = bridge.get_light_objects()
-
-lightbytime = np.array([[datetime.time( 8,00), 3500, 255],
-               [datetime.time(20,00), 3000, 255],
-               [datetime.time(20,30), 3000, 255],
-               [datetime.time(21,00), 2800, 255],
-               [datetime.time(21,30), 2500, 200],
-               [datetime.time(22,00), 2300, 150],
-               [datetime.time(22,30), 2000, 100],
-               [datetime.time(23,00), 2000,  50]]).transpose().tolist()
-
-
-def set_to_temp(temperature, brightness):
-    for light in lights:
+def set_to_temp(temp, bright):
+    for light in LIGHTS:
         light.on = True
-        light.colortemp_k = temperature
-        light.brightness = brightness
+        light.colortemp_k = temp
+        light.brightness = bright
     
-    return temperature, brightness
+    return temp, bright
 
-def if_auto_now():
-    hour = datetime.datetime.now().hour
-    minute = datetime.datetime.now().minute
-    timetocheck = datetime.time(hour, minute)
-    n_times = len(lightbytime[0])
+def auto_value_at_time(time_to_check):
+    n_times = len(light_by_time[0])
     
-    for (i, time) in enumerate(lightbytime[0]):
-        if timetocheck < time:
-            if timetocheck > lightbytime[0][i-1]:
-                temperature = lightbytime[1][i-1]
-                brightness = lightbytime[2][i-1]
+    for (i, time) in enumerate(light_by_time[0]):
+        if time_to_check < time:
+            if time_to_check > light_by_time[0][i-1]:
+                temperature = light_by_time[1][i-1]
+                brightness = light_by_time[2][i-1]
                 return temperature, brightness
-    temperature = lightbytime[1][n_times-1]
-    brightness = lightbytime[2][n_times-1]
-    return temperature, brightness
+    temp = light_by_time[1][n_times-1]
+    bright = light_by_time[2][n_times-1]
+    return temp, bright
 
 def is_override():
-    for light in lights:
+    hour = datetime.datetime.now().hour
+    minute = datetime.datetime.now().minute
+    time_to_check = datetime.time(hour, minute)
+    for light in LIGHTS:
         if light.on:
-            temperature, brightness = if_auto_now()
+            auto_temp, auto_bright = auto_value_at_time(time_to_check)
             lamp_temp = light.colortemp_k
-            lamp_bri = light.brightness
-            if abs(lamp_temp-temperature) > 100 or abs(lamp_bri-brightness) > 10:
+            lamp_bright = light.brightness
+            if abs(lamp_temp-auto_temp) > 100 or abs(lamp_bright-auto_bright) > 10:
                 return True #at least one light does not have auto's values -> not auto
     return False
 
 def set_off():
-    for light in lights:
+    for light in LIGHTS:
         light.on = False
 
-def sun_sim(hour, minute, init=False):
-    timetocheck = datetime.time(hour, minute)
-    n_times = len(lightbytime[0])
-
-    if timetocheck in lightbytime[0]:
-        index = lightbytime[0].index(timetocheck)
-        temperature = lightbytime[1][index]
-        brightness = lightbytime[2][index]
-        return temperature, brightness
-    else:
-        if init:
-            return if_auto_now()
-        else:
-            return None
-
-def set_to_time(hour, minute, init=False):
-    sun = sun_sim(hour, minute, init)
-    if sun:
-        return set_to_temp(sun[0], sun[1])
-    return None
-
-def set_to_cur_time(init=False):
+#returns None if no change is required, otherwise temp, bright for current time
+def sun_sim(init=False):
     hour = datetime.datetime.now().hour
     minute = datetime.datetime.now().minute
-    return set_to_time(hour, minute, init)
+    time_to_check = datetime.time(hour, minute)
+
+    #currently at a change time, so return regardless
+    if time_to_check in light_by_time[0]:
+        index = light_by_time[0].index(time_to_check)
+        temp = light_by_time[1][index]
+        bright = light_by_time[2][index]
+        return temp, bright
+    #in between changes, so return if initializing
+    else:
+        if init:
+            return auto_value_at_time(time_to_check)
+        else:
+            return None, None
+
+def set_to_cur_time(init=False):
+    sun_to_be_set = sun_sim(init)
+    if sun_to_be_set:
+        temp, bright = sun_to_be_set
+        set_to_temp(temp, bright)
+        return temp, bright
+    else:
+        return None, None
+
+if __name__ == '__main__':
+    print("Lights set to {}".format(set_to_cur_time()))

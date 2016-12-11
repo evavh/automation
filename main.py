@@ -53,49 +53,49 @@ def write_log(message, filename="server_log", date_format=True):
 
 #simple light setting function to set light to daytime according to user presence
 #parameters: user_present, prev_user_present
-def light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override):
+def light_setter(present, prev_present, curtain, prev_curtain, night_mode, night_mode_set, override):
     if night_mode and not night_mode_set: #night mode on, always works
         lightcontrol.set_off()
-        off = True
-        temperature = None
-        brightness = None
+        new_off = True
+        new_temp = None
+        new_bright = None
         write_log("night mode on, all lights off")
-    elif not night_mode and not night_mode_set and curtain and user_present: #night mode off, always works
-        temperature, brightness = lightcontrol.set_to_cur_time(init=True)
-        off = False
+    elif not night_mode and not night_mode_set and curtain and present: #night mode off, always works
+        new_temp, new_bright = lightcontrol.set_to_cur_time(init=True)
+        new_off = False
         write_log("night mode off, all lights on")
-    elif user_present and not prev_user_present and curtain and not night_mode: #user entered, always works
-        temperature, brightness = lightcontrol.set_to_cur_time(init=True)
-        off = False
+    elif present and not prev_present and curtain and not night_mode: #user entered, always works
+        new_temp, new_bright = lightcontrol.set_to_cur_time(init=True)
+        new_off = False
         write_log("user entered, all lights on")
-    elif curtain and not prev_curtain and user_present and not night_mode and not override: #curtain closed, only when auto
-        temperature, brightness = lightcontrol.set_to_cur_time(init=True)
-        off = False
+    elif curtain and not prev_curtain and present and not night_mode and not override: #curtain closed, only when auto
+        new_temp, new_bright = lightcontrol.set_to_cur_time(init=True)
+        new_off = False
         write_log("curtains closed, all lights on")
-    elif not user_present and prev_user_present and not night_mode: #user left, always works
+    elif not present and prev_present and not night_mode: #user left, always works
         lightcontrol.set_off()
-        off = True
-        temperature = None
-        brightness = None
+        new_off = True
+        new_temp = None
+        new_bright = None
         write_log("user left, all lights off")
     elif not curtain and prev_curtain and not night_mode and not override: #curtain opened, only when auto
         lightcontrol.set_off()
-        off = True
-        temperature = None
-        brightness = None
+        new_off = True
+        new_temp = None
+        new_bright = None
         write_log("curtains opened, all lights off")
-    elif curtain and user_present and not night_mode and not override: #time update, only when auto
-        off = False
-        temperature, brightness = lightcontrol.set_to_cur_time(init=True) #TODO: init does what except return things?
+    elif curtain and present and not night_mode and not override: #time update, only when auto
+        new_off = False
+        new_temp, new_bright = lightcontrol.set_to_cur_time(init=False)
     else:
-        off = None
-        temperature = None
-        brightness = None
-    return off, temperature, brightness
+        new_off = None
+        new_temp = None
+        new_bright = None
+    return new_off, new_temp, new_bright
 
 #starts a thread running a function with some arguments, default not as daemon
 #parameters: function, arguments (tuple), as_daemon (bool)
-def startthread(function, arguments, as_daemon=False):
+def start_thread(function, arguments, as_daemon=False):
     new_thread = threading.Thread(target=function, args=arguments)
     new_thread.daemon = as_daemon
     new_thread.start()
@@ -110,11 +110,11 @@ def thread_exception_handling(function):
 '''Main function'''
 
 #reads commands from the queue and controls everything
-def main_function(commandqueue, statusqueue, user_event, day_event):
+def main_function(commandqueue, statusqueue, present_event, day_event):
     #init
-    user_present = None
-    prev_user_present = None
-    user_not_present_count = 0
+    present = None
+    prev_present = None
+    not_present_count = 0
     
     curtain = None
     prev_curtain = None
@@ -140,19 +140,19 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
     while True:
         command = commandqueue.get(block=True)
         
-        #bluetooth checking: sets user_present
+        #bluetooth checking: sets present
         if "bluetooth:"+USER_NAME in command:
             if "in" in command:
-                prev_user_present = user_present
-                user_present = True
-                user_not_present_count = 0
-                user_event.set()
+                prev_present = present
+                present = True
+                not_present_count = 0
+                present_event.set()
             elif "out" in command:
-                user_not_present_count += 1
-                if user_not_present_count > PRESENT_THRESHOLD: #we are sure the user is gone
-                    user_event.clear()
-                    prev_user_present = user_present
-                    user_present = False
+                not_present_count += 1
+                if not_present_count > PRESENT_THRESHOLD: #we are sure the user is gone
+                    present_event.clear()
+                    prev_present = present
+                    present = False
                 
         
         #time checking: sets new hour and minute
@@ -178,7 +178,7 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
         elif "http:request_status" in command:
             status = {'light_level':light_level, 'curtain':curtain,
                       'temperature':temperature, 'night_mode':night_mode,
-                      'user_present':user_present, 'lights_temp':lights_temp
+                      'user_present':present, 'lights_temp':lights_temp
                      }
             if not lights_brightness is None:
                 status['lights_brightness'] = round((lights_brightness/255)*100)
@@ -217,13 +217,13 @@ def main_function(commandqueue, statusqueue, user_event, day_event):
                 override = False
                 write_log("override timed out")
         
-        off_new, temp_new, bright_new = light_setter(hour, minute, user_present, prev_user_present, curtain, prev_curtain, night_mode, night_mode_set, override)
-        if off_new:
-            lights_off = off_new
-        if temp_new:
-            lights_temp = temp_new
-        if bright_new:
-            lights_brightness = bright_new
+        new_off, new_temp, new_bright = light_setter(present, prev_present, curtain, prev_curtain, night_mode, night_mode_set, override)
+        if new_off:
+            lights_off = new_off
+        if new_temp:
+            lights_temp = new_temp
+        if new_bright:
+            lights_brightness = new_bright
         
         night_mode_set = True
         
@@ -283,10 +283,10 @@ def temp_sensor_function(commandqueue):
         if TEMP_SENSOR_RATE > dt:
             time.sleep(TEMP_SENSOR_RATE-dt)
 
-def light_sensor_function(commandqueue, user_event, day_event):
+def light_sensor_function(commandqueue, present_event, day_event):
     tsl = tsl2561.TSL2561()
     while True:
-        user_event.wait()
+        present_event.wait()
         day_event.wait()
         
         start = datetime.datetime.now()
@@ -304,18 +304,18 @@ if __name__ == '__main__':
     commandqueue = Queue()
     statusqueue = Queue()
     
-    user_event = threading.Event()
-    user_event.set()
+    present_event = threading.Event()
+    present_event.set()
     
     day_event = threading.Event()
     day_event.set()
     
-    startthread(main_function, (commandqueue, statusqueue, user_event, day_event), False)
-    startthread(http_commands.http_function, (commandqueue, statusqueue), True)
-    startthread(time_function, (commandqueue,), True)
-    startthread(bluetooth_function, (commandqueue, day_event), True)
-    startthread(temp_sensor_function, (commandqueue,), True)
-    startthread(light_sensor_function, (commandqueue, user_event, day_event), True)
+    start_thread(main_function, (commandqueue, statusqueue, present_event, day_event), False)
+    start_thread(http_commands.http_function, (commandqueue, statusqueue), True)
+    start_thread(time_function, (commandqueue,), True)
+    start_thread(bluetooth_function, (commandqueue, day_event), True)
+    start_thread(temp_sensor_function, (commandqueue,), True)
+    start_thread(light_sensor_function, (commandqueue, present_event, day_event), True)
     
     commandqueue.join()
     statusqueue.join()

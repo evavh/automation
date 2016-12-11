@@ -6,9 +6,19 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import time
 import cgi
 import json
+import configparser
+import os
 
-hostName = ""
-hostPort = 8080
+'''Loading config'''
+this_file = os.path.dirname(__file__)
+config = configparser.RawConfigParser()
+config.read(os.path.join(this_file, "config", "main_config.ini"))
+
+if 'HOST_NAME' in config['http']:
+    HOST_NAME = config['http']['HOST_NAME']
+else:
+    HOST_NAME = ""
+HOST_PORT = int(config['http']['PORT'])
 
 def MakeHandlerClass(commandqueue, statusqueue):
     class MyHandler(BaseHTTPRequestHandler):
@@ -48,7 +58,7 @@ def MakeHandlerClass(commandqueue, statusqueue):
     return MyHandler
 
 def http_function(commandqueue, statusqueue):
-    my_server = HTTPServer((hostName, hostPort), MakeHandlerClass(commandqueue, statusqueue))
+    my_server = HTTPServer((HOST_NAME, HOST_PORT), MakeHandlerClass(commandqueue, statusqueue))
     
     try:
           my_server.serve_forever()

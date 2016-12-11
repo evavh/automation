@@ -9,7 +9,7 @@ import math
 import google_api
 from config import alarm_config
 
-def timing():
+def first_event_timing():
     first_event = google_api.first_event()
     time_at_destination = first_event['start']
     location = first_event['location']
@@ -39,13 +39,10 @@ def getup_time(first_event, travel_time):
     
     getup_time = first_event['start'] - total_time
     
-    return getup_time
-
-def alarm_now(night_mode, user_present, getup_time)
-    
+    return getup_time    
 
 if __name__ == '__main__':
-    first_event, travel_time = timing()
+    first_event, travel_time = first_event_timing()
     travel_seconds = travel_time.total_seconds()
     travel_minutes = math.ceil(travel_seconds/60)
     
@@ -58,4 +55,4 @@ if __name__ == '__main__':
     
     getup_time = getup_time(first_event, travel_time)
     
-    print("Time to get up: {:%H:%M}".format(getup_time, enoughstring))
+    print("Time to get up: {:%H:%M}".format(getup_time))
