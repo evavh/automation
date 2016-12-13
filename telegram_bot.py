@@ -22,7 +22,7 @@ def init_webhook():
     params = {'url': URL+':'+str(PORT)+'/'}
     r = requests.get("https://api.telegram.org/bot"+TOKEN+"/setWebhook", 
                       params=params,
-                      files={'certificate' : open('config/PUBLIC.pem', 'r')})
+                      files={'certificate' : open('./config/PUBLIC.pem', 'r')})
     print("server replies:",r.json())
 
 def generate_handler(telegramqueue):
@@ -56,8 +56,8 @@ def bot_server_function(telegramqueue=None):
     init_webhook()
     bot_server = HTTPServer((HOST_NAME, PORT), generate_handler(telegramqueue))
     bot_server.socket = ssl.wrap_socket(bot_server.socket, 
-                                        certfile='config/PUBLIC.pem',
-                                        keyfile='config/PRIVATE.key',
+                                        certfile='./config/PUBLIC.pem',
+                                        keyfile='./config/PRIVATE.key',
                                         server_side=True)
     try:
         print("starting telegram bot server")

@@ -129,7 +129,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
     
     lamps_off = None
     lamps_colour = None
-    lamps_brightness = None
+    lamps_bright = None
     
     http_command = None
     
@@ -178,7 +178,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
             status = {'light_level':light_level, 'curtain':curtain,
                       'temp':temp, 'night_mode':night_mode,
                       'present':present, 'lamps_colour':lamps_colour,
-                      'lamps_bright':None
+                      'lamps_bright':None, 'lamps_off':lamps_off
                      }
             if lamps_bright:
                 status['lamps_bright'] = round((lamps_bright/255)*100)
@@ -223,7 +223,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         if new_colour:
             lamps_colour = new_colour
         if new_bright:
-            lamps_brightness = new_bright
+            lamps_bright = new_bright
         
         night_mode_set = True
         

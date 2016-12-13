@@ -12,7 +12,7 @@ from parsed_config import config
 BRIDGE_IP = config['hue']['BRIDGE_IP']
 
 BRIDGE = phue.Bridge(BRIDGE_IP)
-LIGHTS = BRIDGE.get_light_objects()
+LAMPS = BRIDGE.get_light_objects()
 
 light_by_time = numpy.array([[datetime.time( 8,00), 3500, 255],
                           [datetime.time(20,00), 3000, 255],
@@ -24,7 +24,7 @@ light_by_time = numpy.array([[datetime.time( 8,00), 3500, 255],
                           [datetime.time(23,00), 2000,  50]]).transpose().tolist()
 
 def set_to_temp(temp, bright):
-    for lamp in LIGHTS:
+    for lamp in LAMPS:
         lamp.on = True
         lamp.colortemp_k = temp
         lamp.brightness = bright
@@ -48,7 +48,7 @@ def is_override():
     hour = datetime.datetime.now().hour
     minute = datetime.datetime.now().minute
     time_to_check = datetime.time(hour, minute)
-    for lamp in LIGHTS:
+    for lamp in LAMPS:
         if lamp.on:
             auto_temp, auto_bright = auto_value_at_time(time_to_check)
             lamp_temp = lamp.colortemp_k
@@ -58,7 +58,7 @@ def is_override():
     return False
 
 def set_off():
-    for lamp in LIGHTS:
+    for lamp in LAMPS:
         lamp.on = False
 
 #returns None if no change is required, otherwise temp, bright for current time
@@ -78,7 +78,7 @@ def sun_sim(init=False):
         if init:
             return auto_value_at_time(time_to_check)
         else:
-            return None, None
+            return None
 
 def set_to_cur_time(init=False):
     sun_to_be_set = sun_sim(init)
