@@ -171,7 +171,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         elif "sensors:light" in command:
             light_level = int(command[14:])
             prev_curtain = curtain
-            if light_level > CURTAIN_THRESHOLD + 7:
+            if light_level > CURTAIN_THRESHOLD:
                 curtain = False
             elif light_level < CURTAIN_THRESHOLD:
                 curtain = True
