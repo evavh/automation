@@ -120,6 +120,8 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
     
     night_mode = False
     night_mode_set = False
+    night_light = False
+    night_light_set = False
     
     light_level = -1
     prev_light_level = -1
@@ -187,15 +189,20 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         elif "http:command" in command:
             http_command = command[13:]
             if http_command == "night_on":
-                prev_night_mode = night_mode
                 night_mode = True
                 night_mode_set = False
                 day_event.clear()
             elif http_command == "night_off":
-                prev_night_mode = night_mode
                 night_mode = False
                 night_mode_set = False
                 day_event.set()
+            elif http_command == "night_light_on":
+                lamps_off = False
+                lamps_colour, lamps_bright = lamp_control.night_light_on()
+            elif http_command == "night_light_off":
+                lamps_off = True
+                lamps_colour, lamps_bright = None, None
+                lamp_control.set_off()
         
         #unimplemented or faulty commands
         else:
@@ -218,7 +225,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
                 write_log("override timed out")
         
         new_off, new_colour, new_bright = lamp_setter(present, prev_present, curtain, prev_curtain, night_mode, night_mode_set, override)
-        if new_off:
+        if new_off is not None:
             lamps_off = new_off
         if new_colour:
             lamps_colour = new_colour

@@ -61,6 +61,9 @@ def set_off():
     for lamp in LAMPS:
         lamp.on = False
 
+def night_light_on():
+    return set_to_temp(2000, 1)
+
 #returns None if no change is required, otherwise temp, bright for current time
 def sun_sim(init=False):
     hour = datetime.datetime.now().hour
