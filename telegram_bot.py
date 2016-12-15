@@ -4,6 +4,7 @@ import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import ssl
 import json
+import os
 
 '''Reading configuration'''
 from parsed_config import config
@@ -16,13 +17,16 @@ TOKEN = config['telegram']['TOKEN']
 URL = config['telegram']['URL']
 PORT = int(config['telegram']['PORT'])
 
+THIS_FILE = os.path.dirname(__file__)
+PUBLIC_KEY = os.path.join(THIS_FILE, "config", "PUBLIC.pem")
+PRIVATE_KEY = os.path.join(THIS_FILE, "config", "PRIVATE.key")
 
 #enable the webhook and upload the certificate 
 def init_webhook():
     params = {'url': URL+':'+str(PORT)+'/'}
     r = requests.get("https://api.telegram.org/bot"+TOKEN+"/setWebhook", 
                       params=params,
-                      files={'certificate' : open('./config/PUBLIC.pem', 'r')})
+                      files={'certificate' : open(PUBLIC_KEY, 'r')})
     print("server replies:",r.json())
 
 def generate_handler(telegramqueue):
@@ -56,8 +60,8 @@ def bot_server_function(telegramqueue=None):
     init_webhook()
     bot_server = HTTPServer((HOST_NAME, PORT), generate_handler(telegramqueue))
     bot_server.socket = ssl.wrap_socket(bot_server.socket, 
-                                        certfile='./config/PUBLIC.pem',
-                                        keyfile='./config/PRIVATE.key',
+                                        certfile=PUBLIC_KEY,
+                                        keyfile=PRIVATE_KEY,
                                         server_side=True)
     try:
         print("starting telegram bot server")

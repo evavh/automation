@@ -32,6 +32,7 @@ TEMP_SENSOR_RATE = int(config['rates']['TEMP_SENSOR'])
 TIME_RATE = int(config['rates']['TIME'])
 
 CURTAIN_THRESHOLD = int(config['thresholds']['CURTAIN'])
+CURTAIN_ERROR = int(config['thresholds']['LIGHT_ERROR'])
 PRESENT_THRESHOLD = int(config['thresholds']['PRESENT'])
 
 THIS_FILE = os.path.dirname(__file__)
@@ -170,10 +171,11 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         
         elif "sensors:light" in command:
             light_level = int(command[14:])
+            write_log(light_level, "light_log")
             prev_curtain = curtain
-            if light_level > CURTAIN_THRESHOLD:
+            if light_level > CURTAIN_THRESHOLD + CURTAIN_ERROR:
                 curtain = False
-            elif light_level < CURTAIN_THRESHOLD:
+            elif light_level < CURTAIN_THRESHOLD - CURTAIN_ERROR:
                 curtain = True
         
         elif "http:request_status" in command:
