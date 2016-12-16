@@ -10,6 +10,7 @@ import sys
 import threading
 import datetime
 import os
+import traceback
 
 from subprocess import check_output
 from queue import Queue
@@ -52,60 +53,37 @@ def write_log(message, filename="server_log", date_format=True):
         f.close()
 
 #simple lamp setting function to set lamps to daytime according to user presence
-#parameters: user_present, prev_user_present
-def lamp_setter(present, prev_present, curtain, prev_curtain, night_mode, night_mode_set, override):
-    if night_mode and not night_mode_set: #night mode on, always works
-        lamp_control.set_off()
-        new_off = True
-        new_colour = None
-        new_bright = None
-        write_log("night mode on, all lamps off")
-    elif not night_mode and not night_mode_set and curtain and present: #night mode off, always works
-        new_colour, new_bright = lamp_control.set_to_cur_time(init=True)
-        new_off = False
-        write_log("night mode off, all lamps on")
-    elif present and not prev_present and curtain and not night_mode: #user entered, always works
-        new_colour, new_bright = lamp_control.set_to_cur_time(init=True)
-        new_off = False
-        write_log("user entered, all lamps on")
-    elif curtain and not prev_curtain and present and not night_mode and not override: #curtain closed, only when auto
-        new_colour, new_bright = lamp_control.set_to_cur_time(init=True)
-        new_off = False
-        write_log("curtains closed, all lamps on")
-    elif not present and prev_present and not night_mode: #user left, always works
-        lamp_control.set_off()
-        new_off = True
-        new_colour = None
-        new_bright = None
-        write_log("user left, all lamps off")
-    elif not curtain and prev_curtain and not night_mode and not override: #curtain opened, only when auto
-        lamp_control.set_off()
-        new_off = True
-        new_colour = None
-        new_bright = None
-        write_log("curtains opened, all lamps off")
-    elif curtain and present and not night_mode and not override: #time update, only when auto
-        new_off = False
-        new_colour, new_bright = lamp_control.set_to_cur_time(init=False)
-    else:
+#only run when something's changed
+def lamp_setter(override, priority_change, present, curtain, night_mode):
+    if not override or priority_change: #we are on auto or the change is important
+        if present and curtain and not night_mode: #lamps should be on
+            new_colour, new_bright = lamp_control.set_to_cur_time(init=True)
+            new_off = False
+            write_log("lamps set to on, with automatic configuration")
+        else: #lamps should be off
+            lamp_control.set_off()
+            new_colour, new_bright = None, None
+            new_off = True
+            write_log("lamps set to off")
+    else: #we are on override and the change has no priority over it
+        new_colour, new_bright = None, None
         new_off = None
-        new_colour = None
-        new_bright = None
+        
     return new_off, new_colour, new_bright
 
 #starts a thread running a function with some arguments, default not as daemon
 #parameters: function, arguments (tuple), as_daemon (bool)
-def start_thread(function, arguments, as_daemon=False):
-    new_thread = threading.Thread(target=function, args=arguments)
+
+def thread_exception_handling(function, args):
+    try:
+        function(*args)
+    except:
+        write_log(traceback.format_exception_only(sys.exc_info()[0], sys.exc_info()[1])[0][:-1])
+
+def start_thread(function, args, as_daemon=False):
+    new_thread = threading.Thread(target=thread_exception_handling, args=(function,args))
     new_thread.daemon = as_daemon
     new_thread.start()
-
-def thread_exception_handling(function):
-    try:
-        function
-    except:
-        pass
-        
 
 '''Main function'''
 
@@ -113,28 +91,25 @@ def thread_exception_handling(function):
 def main_function(commandqueue, statusqueue, present_event, day_event):
     #init
     present = None
-    prev_present = None
     not_present_count = 0
     
     curtain = None
-    prev_curtain = None
     
     night_mode = False
-    night_mode_set = False
     night_light = False
-    night_light_set = False
     
     light_level = -1
-    prev_light_level = -1
     
     override = False
     override_detected = 0 #counts number of times we have found the lamps not on auto
     
+    #nothing has changed yet
+    change = False
+    priority_change = False
+    
     lamps_off = None
     lamps_colour = None
     lamps_bright = None
-    
-    http_command = None
     
     while True:
         command = commandqueue.get(block=True)
@@ -142,7 +117,6 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         #bluetooth checking: sets present
         if "bluetooth:"+USER_NAME in command:
             if "in" in command:
-                prev_present = present
                 present = True
                 not_present_count = 0
                 present_event.set()
@@ -150,14 +124,15 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
                 not_present_count += 1
                 if not_present_count > PRESENT_THRESHOLD: #we are sure the user is gone
                     present_event.clear()
-                    prev_present = present
                     present = False
+            priority_change = True
                 
         
         #time checking: sets new hour and minute
         elif "time" in command:
             hour = int(command[5:7])
             minute = int(command[8:10])
+            change = True
         
         #sensor checking: sets temp and light_level
         elif "sensors:temp" in command:
@@ -169,11 +144,11 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         elif "sensors:light" in command:
             light_level = int(command[14:])
             write_log(light_level, "light_log")
-            prev_curtain = curtain
             if light_level > CURTAIN_THRESHOLD + CURTAIN_ERROR:
                 curtain = False
             elif light_level < CURTAIN_THRESHOLD - CURTAIN_ERROR:
                 curtain = True
+            change = True
         
         elif "http:request_status" in command:
             status = {'light_level':light_level, 'curtain':curtain,
@@ -189,11 +164,11 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
             http_command = command[13:]
             if http_command == "night_on":
                 night_mode = True
-                night_mode_set = False
+                priority_change = True
                 day_event.clear()
             elif http_command == "night_off":
                 night_mode = False
-                night_mode_set = False
+                priority_change = True
                 day_event.set()
             elif http_command == "night_light_on":
                 lamps_off = False
@@ -223,15 +198,17 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
                 override = False
                 write_log("override timed out")
         
-        new_off, new_colour, new_bright = lamp_setter(present, prev_present, curtain, prev_curtain, night_mode, night_mode_set, override)
+        #setting the lights if something has changed
+        if change or priority_change:
+            new_off, new_colour, new_bright = lamp_setter(override, priority_change, present, curtain, night_mode)
+            change = False
+            priority_change = False
         if new_off is not None:
             lamps_off = new_off
         if new_colour:
             lamps_colour = new_colour
         if new_bright:
             lamps_bright = new_bright
-        
-        night_mode_set = True
         
         commandqueue.task_done()
     write_log("server stopped")
@@ -246,14 +223,17 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
 #config: rate
 def time_function(commandqueue):
     while True:
-        hour = datetime.datetime.now().hour
+        #wait TIME_RATE minutes between each check
         minute = datetime.datetime.now().minute
         time.sleep((TIME_RATE - (minute % TIME_RATE)) * 60)
-        cur_time = datetime.datetime.now().strftime("%H:%M")
+        
+        #check if we need to send a command, if so send it
         hour = datetime.datetime.now().hour
         minute = datetime.datetime.now().minute
-        command = "time:{}".format(cur_time)
-        commandqueue.put(command)
+        if datetime.time(hour, minute) in lamp_control.light_by_time[0]:
+            cur_time = datetime.datetime.now().strftime("%H:%M")
+            command = "time:{}".format(cur_time)
+            commandqueue.put(command)
 
 #check the bluetooth presence of the user at a certain rate
 #commands: bluetooth:<user_name>:[in, out]
