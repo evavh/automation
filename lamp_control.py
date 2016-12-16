@@ -7,6 +7,8 @@
 import datetime
 import numpy
 import phue
+
+import convert_colour
 from parsed_config import config
 
 BRIDGE_IP = config['hue']['BRIDGE_IP']
@@ -30,6 +32,13 @@ def set_to_temp(temp, bright):
         lamp.brightness = bright
     
     return temp, bright
+
+def set_to_colour(r, g, b):
+    x, y, bright = convert_colour.rgb_to_xy(r, g, b)
+    for lamp in LAMPS:
+        lamp.on = True
+        lamp.xy = (x, y)
+        lamp.brightness = bright
 
 def auto_value_at_time(time_to_check):
     n_times = len(light_by_time[0])
@@ -62,7 +71,7 @@ def set_off():
         lamp.on = False
 
 def night_light_on():
-    return set_to_temp(2000, 1)
+    return set_to_colour(1, 0, 0)
 
 #returns None if no change is required, otherwise temp, bright for current time
 def sun_sim(init=False):
