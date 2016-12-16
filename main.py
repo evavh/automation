@@ -136,9 +136,6 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
     
     http_command = None
     
-    hour = datetime.datetime.now().hour
-    minute = datetime.datetime.now().minute
-    
     while True:
         command = commandqueue.get(block=True)
         
