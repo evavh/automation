@@ -6,6 +6,8 @@ import ssl
 import json
 import os
 
+from main import write_log
+
 '''Reading configuration'''
 from parsed_config import config
 
@@ -27,7 +29,11 @@ def init_webhook():
     r = requests.get("https://api.telegram.org/bot"+TOKEN+"/setWebhook", 
                       params=params,
                       files={'certificate' : open(PUBLIC_KEY, 'r')})
-    print("server replies:",r.json())
+    reply = r.json()
+    if reply['result'] and reply['ok']:
+        write_log("telegram webhook set succesfully")
+    else:
+        write_log("no telegram webhook set, server replied: {}".format(reply))
 
 def generate_handler(telegramqueue):
     #used to pass above vars to myhandler class in a way that works..... je zet
@@ -64,7 +70,6 @@ def bot_server_function(telegramqueue=None):
                                         keyfile=PRIVATE_KEY,
                                         server_side=True)
     try:
-        print("starting telegram bot server")
         bot_server.serve_forever()
     except KeyboardInterrupt:
         pass

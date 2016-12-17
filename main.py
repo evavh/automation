@@ -57,7 +57,7 @@ def write_log(message, filename="server_log", date_format=True):
 def lamp_setter(override, priority_change, present, curtain, night_mode):
     if not override or priority_change: #we are on auto or the change is important
         if present and curtain and not night_mode: #lamps should be on
-            new_colour, new_bright = lamp_control.set_to_cur_time(init=True)
+            new_colour, new_bright = lamp_control.set_to_cur_time()
             new_off = False
             write_log("lamps set to on, with automatic configuration")
         else: #lamps should be off
@@ -91,9 +91,11 @@ def start_thread(function, args, as_daemon=False):
 def main_function(commandqueue, statusqueue, present_event, day_event):
     #init
     present = None
+    prev_present = None
     not_present_count = 0
     
     curtain = None
+    prev_curtain = None
     
     night_mode = False
     night_light = False
@@ -116,6 +118,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         
         #bluetooth checking: sets present
         if "bluetooth:"+USER_NAME in command:
+            prev_present = present
             if "in" in command:
                 present = True
                 not_present_count = 0
@@ -125,7 +128,8 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
                 if not_present_count > PRESENT_THRESHOLD: #we are sure the user is gone
                     present_event.clear()
                     present = False
-            priority_change = True
+            if present != prev_present:
+                priority_change = True
                 
         
         #time checking: sets new hour and minute
@@ -144,11 +148,13 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         elif "sensors:light" in command:
             light_level = int(command[14:])
             write_log(light_level, "light_log")
+            prev_curtain = curtain
             if light_level > CURTAIN_THRESHOLD + CURTAIN_ERROR:
                 curtain = False
             elif light_level < CURTAIN_THRESHOLD - CURTAIN_ERROR:
                 curtain = True
-            change = True
+            if curtain != prev_curtain:
+                change = True
         
         elif "http:request_status" in command:
             status = {'light_level':light_level, 'curtain':curtain,
@@ -230,7 +236,7 @@ def time_function(commandqueue):
         #check if we need to send a command, if so send it
         hour = datetime.datetime.now().hour
         minute = datetime.datetime.now().minute
-        if datetime.time(hour, minute) in lamp_control.light_by_time[0]:
+        if datetime.time(hour, minute) in lamp_control.lamps_by_time[0]:
             cur_time = datetime.datetime.now().strftime("%H:%M")
             command = "time:{}".format(cur_time)
             commandqueue.put(command)
