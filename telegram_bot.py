@@ -5,6 +5,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import ssl
 import json
 import os
+import time
 
 from main import write_log
 
@@ -18,10 +19,58 @@ else:
 TOKEN = config['telegram']['TOKEN']
 URL = config['telegram']['URL']
 PORT = int(config['telegram']['PORT'])
+USER_ID = int(config['telegram']['USER_ID'])
 
 THIS_FILE = os.path.dirname(__file__)
 PUBLIC_KEY = os.path.join(THIS_FILE, "config", "PUBLIC.pem")
 PRIVATE_KEY = os.path.join(THIS_FILE, "config", "PRIVATE.key")
+
+def send_message(text, chat_id, message_id=None):
+    if message_id:
+        bot_message = {'text': text, 'chat_id': chat_id, 'reply_to_message_id': message_id}
+    else:
+        bot_message = {'text': text, 'chat_id': chat_id}
+    requests.post("https://api.telegram.org/bot"+TOKEN+"/sendMessage", params=bot_message)
+
+def determine_reply(message_text):
+    if "/status" in message_text:
+        reply_text = "This is a status."
+    elif "/night_on" in message_text:
+        reply_text = "It is now night."
+    elif "/night_off" in message_text:
+        reply_text = "It is now day."
+    elif "/night_light_on" in message_text:
+        reply_text = "Temporary light on."
+    elif "/night_light_off" in message_text:
+        reply_text = "Darkness returns."
+    
+    return reply_text
+
+def handle_message(message):
+    if message:
+        #extract information
+        message_id = message['message_id']
+        from_id = message['from']['id']
+        from_name = message['from']['first_name']
+        chat_id = message['chat']['id']
+        message_text = message['text']
+        if 'title' in message['chat']:
+            is_group = True
+        else:
+            is_group = False
+        
+        if message['date'] > time.time() - 60:
+            if from_id == USER_ID:
+                reply_text = determine_reply(message_text)
+                if is_group:
+                    send_message(reply_text, chat_id, message_id)
+                else:
+                    send_message(reply_text, chat_id)
+            else:
+                if is_group:
+                    send_message("No! 3:!", chat_id, message_id)
+                else:
+                    send_message("No! 3:!", chat_id)
 
 #enable the webhook and upload the certificate 
 def init_webhook():
@@ -52,12 +101,9 @@ def generate_handler(telegramqueue):
             content_len = int(self.headers['content-length'])
             post_body = self.rfile.read(content_len)
             post_body_str = post_body.decode("utf-8")
-            data = json.loads(post_body_str)
+            message = json.loads(post_body_str)['message']
             
-            if telegramqueue:
-                telegramqueue.put(data)
-            else:
-                print(data)
+            handle_message(message)
             
             return
     return my_handler
