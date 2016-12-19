@@ -84,7 +84,7 @@ def init_webhook():
     else:
         write_log("no telegram webhook set, server replied: {}".format(reply))
 
-def generate_handler(telegramqueue):
+def generate_handler(command_queue, status_queue):
     #used to pass above vars to myhandler class in a way that works..... je zet
     #eigl de vars in de scope van de class en daarom werky, soort constructor
     class my_handler(BaseHTTPRequestHandler):
@@ -108,9 +108,9 @@ def generate_handler(telegramqueue):
             return
     return my_handler
     
-def bot_server_function(telegramqueue=None):
+def bot_server_function(command_queue, status_queue):
     init_webhook()
-    bot_server = HTTPServer((HOST_NAME, PORT), generate_handler(telegramqueue))
+    bot_server = HTTPServer((HOST_NAME, PORT), generate_handler(command_queue, status_queue))
     bot_server.socket = ssl.wrap_socket(bot_server.socket, 
                                         certfile=PUBLIC_KEY,
                                         keyfile=PRIVATE_KEY,
