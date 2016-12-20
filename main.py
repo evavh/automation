@@ -178,7 +178,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
                 day_event.set()
             elif http_command == "night_light_on":
                 lamps_off = False
-                lamps_colour, lamps_bright = lamp_control.night_light_on()
+                lamp_control.night_light_on()
             elif http_command == "night_light_off":
                 lamps_off = True
                 lamps_colour, lamps_bright = None, None

@@ -25,6 +25,18 @@ lamps_by_time = numpy.array([[datetime.time( 8,00), 3500, 255],
                              [datetime.time(22,30), 2000, 100],
                              [datetime.time(23,00), 2000,  50]]).transpose().tolist()
 
+def lamp_probe():
+    for lamp in LAMPS:
+        name = lamp.name
+        on = lamp.on
+        if on:
+            colortemp_k = lamp.colortemp_k
+            bright = lamp.brightness
+            xy = lamp.xy
+            print("{} is set to {}K, colour {}, at brightness {}.".format(name, colortemp_k, xy, bright))
+        else:
+            print("{} is off.".format(name))
+
 def set_to_temp(temp, bright):
     for lamp in LAMPS:
         lamp.on = True
@@ -33,8 +45,14 @@ def set_to_temp(temp, bright):
     
     return temp, bright
 
-def set_to_colour(r, g, b):
+def set_to_rgb(r, g, b):
     x, y, bright = convert_colour.rgb_to_xy(r, g, b)
+    for lamp in LAMPS:
+        lamp.on = True
+        lamp.xy = (x, y)
+        lamp.brightness = bright
+
+def set_to_xy(x, y, bright):
     for lamp in LAMPS:
         lamp.on = True
         lamp.xy = (x, y)
@@ -75,7 +93,7 @@ def set_off():
         lamp.on = False
 
 def night_light_on():
-    return set_to_colour(1, 0, 0)
+    set_to_xy(0.675, 0.322, 1)
 
 def set_to_cur_time():
     temp, bright = auto_value_now()
@@ -83,4 +101,4 @@ def set_to_cur_time():
     return temp, bright
 
 if __name__ == '__main__':
-    print("Lights set to {}".format(set_to_cur_time()))
+    lamp_probe()

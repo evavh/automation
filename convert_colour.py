@@ -25,10 +25,10 @@ def rgb_to_xy(r, g, b):
     #Conversion
     x = r*41.24+g*35.76+b*18.05
     y = r*21.26+g*71.52+b*7.22
-    Z = r*1.93+g*11.92+b*95.05
+    z = r*1.93+g*11.92+b*95.05
     
-    #x = x / (x + y + Z)
-    #y = y / (x + y + Z)
+    x = x / (x + y + z)
+    y = y / (x + y + z)
     
     bright = int(round(y*255))
     
