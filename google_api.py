@@ -123,6 +123,7 @@ def first_event():
             event_list = r.json()['items']
             
             if not event_list == []:
+                next_event = None
                 #Run through events to find the first one that matches the conditions
                 #(has name, has start time, is marked as busy)
                 for event in event_list:
@@ -139,7 +140,8 @@ def first_event():
                             
                             break #first event that matches breaks the loop
                 
-                next_event_list.append(next_event)
+                if next_event:
+                    next_event_list.append(next_event)
     if next_event_list == []:
         first_event = None
     else:

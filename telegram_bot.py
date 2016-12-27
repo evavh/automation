@@ -32,21 +32,35 @@ def send_message(text, chat_id, message_id=None):
         bot_message = {'text': text, 'chat_id': chat_id}
     requests.post("https://api.telegram.org/bot"+TOKEN+"/sendMessage", params=bot_message)
 
-def determine_reply(message_text):
+def determine_reply(message_text, command_queue, status_queue):
     if "/status" in message_text:
-        reply_text = "This is a status."
+        command_queue.put("telegram:request_status")
+        status = status_queue.get(block=True)
+        light_level = status['light_level']
+        curtain = status['curtain']
+        temp = status['temp']
+        night_mode = status['night_mode']
+        present = status['present']
+        lamps_colour = status['lamps_colour']
+        lamps_bright = status['lamps_bright']
+        lamps_off = status['lamps_off']
+        reply_text = "System status:\nTemperature: {}C\nLight level: {}\nLamp colour: {}K\nLamp brightness: {}\n".format(temp, light_level, lamps_colour, lamps_bright)
     elif "/night_on" in message_text:
+        command_queue.put("command:night_on")
         reply_text = "It is now night."
     elif "/night_off" in message_text:
+        command_queue.put("command:night_off")
         reply_text = "It is now day."
     elif "/night_light_on" in message_text:
+        command_queue.put("command:night_light_on")
         reply_text = "Temporary light on."
     elif "/night_light_off" in message_text:
+        command_queue.put("command:night_light_off")
         reply_text = "Darkness returns."
     
     return reply_text
 
-def handle_message(message):
+def handle_message(message, command_queue, status_queue):
     if message:
         #extract information
         message_id = message['message_id']
@@ -61,7 +75,7 @@ def handle_message(message):
         
         if message['date'] > time.time() - 60:
             if from_id == USER_ID:
-                reply_text = determine_reply(message_text)
+                reply_text = determine_reply(message_text, command_queue, status_queue)
                 if is_group:
                     send_message(reply_text, chat_id, message_id)
                 else:
@@ -103,7 +117,7 @@ def generate_handler(command_queue, status_queue):
             post_body_str = post_body.decode("utf-8")
             message = json.loads(post_body_str)['message']
             
-            handle_message(message)
+            handle_message(message, command_queue, status_queue)
             
             return
     return my_handler

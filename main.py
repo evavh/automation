@@ -16,7 +16,7 @@ from subprocess import check_output
 from queue import Queue
 
 import lamp_control
-import tsl2561
+import tsl2561 #module for light sensor
 import temp_sensor
 import http_commands
 import telegram_bot
@@ -88,7 +88,7 @@ def start_thread(function, args, as_daemon=False):
 '''Main function'''
 
 #reads commands from the queue and controls everything
-def main_function(commandqueue, statusqueue, present_event, day_event):
+def main_function(command_queue, http_status_queue, telegram_status_queue, present_event, day_event):
     #init
     present = None
     prev_present = None
@@ -99,6 +99,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
     
     night_mode = False
     night_light = False
+    alarm_time = None
     
     light_level = -1
     
@@ -108,13 +109,14 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
     #nothing has changed yet
     change = False
     priority_change = False
+    trans_time = None
     
     lamps_off = None
     lamps_colour = None
     lamps_bright = None
     
     while True:
-        command = commandqueue.get(block=True)
+        command = command_queue.get(block=True)
         
         #bluetooth checking: sets present
         if "bluetooth:"+USER_NAME in command:
@@ -137,6 +139,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
             hour = int(command[5:7])
             minute = int(command[8:10])
             change = True
+            trans_time = 5
         
         #sensor checking: sets temp and light_level
         elif "sensors:temp" in command:
@@ -156,7 +159,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
             if curtain != prev_curtain:
                 change = True
         
-        elif "http:request_status" in command:
+        elif "request_status" in command:
             status = {'light_level':light_level, 'curtain':curtain,
                       'temp':temp, 'night_mode':night_mode,
                       'present':present, 'lamps_colour':lamps_colour,
@@ -164,20 +167,29 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
                      }
             if lamps_bright:
                 status['lamps_bright'] = round((lamps_bright/255)*100)
-            statusqueue.put(status)
+            if "http" in command:
+                http_status_queue.put(status)
+            elif "telegram" in command:
+                telegram_status_queue.put(status)
         
-        elif "http:command" in command:
-            http_command = command[13:]
+        elif "command" in command:
+            http_command = command[8:]
             if http_command == "night_on":
+                alarm_time = alarm.alarm_time()
+                alarm.set_cron_alarm(alarm_time)
                 night_mode = True
                 priority_change = True
                 day_event.clear()
             elif http_command == "night_off":
+                alarm_time = None
                 night_mode = False
                 priority_change = True
+                trans_time = 30
                 day_event.set()
             elif http_command == "night_light_on":
                 lamps_off = False
+                lamps_colour = 1000
+                lamps_bright = 1
                 lamp_control.night_light_on()
             elif http_command == "night_light_off":
                 lamps_off = True
@@ -206,9 +218,10 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         
         #setting the lights if something has changed
         if change or priority_change:
-            new_off, new_colour, new_bright = lamp_setter(override, priority_change, present, curtain, night_mode)
+            new_off, new_colour, new_bright = lamp_setter(override, priority_change, trans_time, present, curtain, night_mode)
             change = False
             priority_change = False
+            trans_time = None
         if new_off is not None:
             lamps_off = new_off
         if new_colour:
@@ -216,7 +229,7 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
         if new_bright:
             lamps_bright = new_bright
         
-        commandqueue.task_done()
+        command_queue.task_done()
     write_log("server stopped")
     
 
@@ -225,9 +238,9 @@ def main_function(commandqueue, statusqueue, present_event, day_event):
 
 #send the time to the main thread every certain number of minutes
 #commands: time:<hour>:<minute>
-#parameters: commandqueue
+#parameters: command_queue
 #config: rate
-def time_function(commandqueue):
+def time_function(command_queue):
     while True:
         #wait TIME_RATE minutes between each check
         minute = datetime.datetime.now().minute
@@ -239,13 +252,13 @@ def time_function(commandqueue):
         if datetime.time(hour, minute) in lamp_control.lamps_by_time[0]:
             cur_time = datetime.datetime.now().strftime("%H:%M")
             command = "time:{}".format(cur_time)
-            commandqueue.put(command)
+            command_queue.put(command)
 
 #check the bluetooth presence of the user at a certain rate
 #commands: bluetooth:<user_name>:[in, out]
-#parameters: commandqueue
+#parameters: command_queue
 #config: rate, user_mac, user_name
-def bluetooth_function(commandqueue, day_event):
+def bluetooth_function(command_queue, day_event):
     while True:
         day_event.wait()
         
@@ -253,9 +266,9 @@ def bluetooth_function(commandqueue, day_event):
         name = check_output(["hcitool", "name", USER_MAC]).decode("utf-8")[:-1]
         
         if name == USER_NAME:
-            commandqueue.put("bluetooth:{}:in".format(USER_NAME))
+            command_queue.put("bluetooth:{}:in".format(USER_NAME))
         else:
-            commandqueue.put("bluetooth:{}:out".format(USER_NAME))
+            command_queue.put("bluetooth:{}:out".format(USER_NAME))
         
         end = datetime.datetime.now()
         dt = (end - start).total_seconds()
@@ -263,19 +276,19 @@ def bluetooth_function(commandqueue, day_event):
             time.sleep(BLUETOOTH_RATE-dt)
         
 
-def temp_sensor_function(commandqueue):
+def temp_sensor_function(command_queue):
     while True:
         start = datetime.datetime.now()
 
         temp = round(temp_sensor.read_temp(), 1)
-        commandqueue.put("sensors:temp:{}".format(temp))
+        command_queue.put("sensors:temp:{}".format(temp))
         
         end = datetime.datetime.now()
         dt = (end - start).total_seconds()
         if TEMP_SENSOR_RATE > dt:
             time.sleep(TEMP_SENSOR_RATE-dt)
 
-def light_sensor_function(commandqueue, present_event, day_event):
+def light_sensor_function(command_queue, present_event, day_event):
     tsl = tsl2561.TSL2561()
     while True:
         present_event.wait()
@@ -284,7 +297,7 @@ def light_sensor_function(commandqueue, present_event, day_event):
         start = datetime.datetime.now()
         
         light = int(tsl.lux())
-        commandqueue.put("sensors:light:{}".format(light))
+        command_queue.put("sensors:light:{}".format(light))
         
         end = datetime.datetime.now()
         dt = (end - start).total_seconds()
@@ -293,9 +306,9 @@ def light_sensor_function(commandqueue, present_event, day_event):
 
 if __name__ == '__main__':
     write_log("starting server")
-    commandqueue = Queue()
-    statusqueue = Queue()
-    telegramqueue = Queue()
+    command_queue = Queue()
+    http_status_queue = Queue()
+    telegram_status_queue = Queue()
     
     present_event = threading.Event()
     present_event.set()
@@ -303,16 +316,16 @@ if __name__ == '__main__':
     day_event = threading.Event()
     day_event.set()
     
-    start_thread(main_function, (commandqueue, statusqueue, present_event, day_event), False)
+    start_thread(main_function, (command_queue, http_status_queue, telegram_status_queue, present_event, day_event), False)
     
-    start_thread(time_function, (commandqueue,), True)
-    start_thread(bluetooth_function, (commandqueue, day_event), True)
-    start_thread(temp_sensor_function, (commandqueue,), True)
-    start_thread(light_sensor_function, (commandqueue, present_event, day_event), True)
+    start_thread(time_function, (command_queue,), True)
+    start_thread(bluetooth_function, (command_queue, day_event), True)
+    start_thread(temp_sensor_function, (command_queue,), True)
+    start_thread(light_sensor_function, (command_queue, present_event, day_event), True)
     
-    start_thread(http_commands.http_function, (commandqueue, statusqueue), True)
-    start_thread(telegram_bot.bot_server_function, (telegramqueue,), True)
+    start_thread(http_commands.http_function, (command_queue, http_status_queue), True)
+    start_thread(telegram_bot.bot_server_function, (command_queue, telegram_status_queue,), True)
     
-    commandqueue.join()
-    statusqueue.join()
-    telegramqueue.join()
+    command_queue.join()
+    http_status_queue.join()
+    telegram_status_queue.join()

@@ -5,9 +5,14 @@
 import requests
 import datetime
 import math
+from crontab import CronTab
 
 import google_api
+import music
 from config import alarm_config
+
+SLEEP_HOURS = 10
+WAKEUP_PLAYLIST = "wakeup"
 
 def first_event_timing():
     first_event = google_api.first_event()
@@ -38,32 +43,33 @@ def first_event_timing():
     
     return first_event, travel_time
 
-def getup_time(first_event, travel_time):
+def alarm_time():
+    first_event, travel_time = first_event_timing()
     routine = datetime.timedelta(minutes=45)
     extra = datetime.timedelta(minutes=10)
     total_time = travel_time + routine + extra
     
     getup_time = first_event['start'] - total_time
     
-    return getup_time
+    sleep_delta = datetime.timedelta(hours=SLEEP_HOURS)
+    #if there is plenty of time to sleep
+    if getup_time - datetime.datetime.now() > sleep_delta:
+        return datetime.datetime.now() + sleep_delta
+    else:
+        return getup_time
+
+def set_cron_alarm(alarm_time):
+    my_cron = CronTab(user=True) #load my crontab
+    my_cron.remove_all(comment="automatic_alarm") #clean up old entries
+    
+    #create and setup new job
+    job = my_cron.new(command='/home/eva/server/alarm.py', comment="automatic_alarm")
+    job.hour.on(alarm_time.hour)
+    job.minute.also.on(alarm_time.minute)
+    
+    my_cron.write() #write the changes to the crontab
 
 if __name__ == '__main__':
-    timing = first_event_timing()
-    if timing:
-        first_event, travel_time = timing
-        
-        travel_seconds = travel_time.total_seconds()
-        travel_minutes = math.ceil(travel_seconds/60)
-
-        if travel_minutes > 60:
-            timestring = "{} hours and {} minutes".format(math.floor(travel_minutes/60), travel_minutes%60)
-        else:
-            timestring = "{} minutes".format(travel_minutes)
-
-        print("Time to travel to {} at {:%H:%M}: {}".format(first_event['name'], first_event['start'], timestring))
-
-        getup_time = getup_time(first_event, travel_time)
-
-        print("Time to get up: {:%H:%M}".format(getup_time))
-    else:
-        print("No event found within {}".format(hours_ahead))
+    music.start_shuffle_playlist(WAKEUP_PLAYLIST)
+    commands = {'command': 'night_off'}
+    requests.post("192.168.0.111:8080", params=commands)

@@ -37,23 +37,26 @@ def lamp_probe():
         else:
             print("{} is off.".format(name))
 
-def set_to_temp(temp, bright):
+def set_to_temp(temp, bright, trans_time=None):
     for lamp in LAMPS:
+        lamp.transitiontime = trans_time
         lamp.on = True
         lamp.colortemp_k = temp
         lamp.brightness = bright
     
     return temp, bright
 
-def set_to_rgb(r, g, b):
+def set_to_rgb(r, g, b, trans_time=None):
     x, y, bright = convert_colour.rgb_to_xy(r, g, b)
     for lamp in LAMPS:
+        lamp.transitiontime = trans_time
         lamp.on = True
         lamp.xy = (x, y)
         lamp.brightness = bright
 
-def set_to_xy(x, y, bright):
+def set_to_xy(x, y, bright, trans_time=None):
     for lamp in LAMPS:
+        lamp.transitiontime = trans_time
         lamp.on = True
         lamp.xy = (x, y)
         lamp.brightness = bright

@@ -49,7 +49,7 @@ def generate_handler(commandqueue, statusqueue):
             
             if 'command' in data:
                 command = data['command']
-            commandqueue.put("http:command:{}".format(command))
+            commandqueue.put("command:{}".format(command))
             
             path = self.path
     return my_handler
