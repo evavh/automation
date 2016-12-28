@@ -146,12 +146,11 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
         elif "sensors:temp" in command:
             temp = float(command[13:])
             year_month = datetime.datetime.now().strftime("%Y-%m")
-            write_log(str(temp), filename="temp_log", date_format=None)
-            write_log(str(temp), filename="temp_log"+"_"+year_month, date_format=None)
+            write_log(str(temp), filename="temp_log", date_format=False)
+            write_log(str(temp), filename="temp_log"+"_"+year_month, date_format=False)
         
         elif "sensors:light" in command:
             light_level = int(command[14:])
-            write_log(light_level, "light_log")
             prev_curtain = curtain
             if light_level > CURTAIN_THRESHOLD + CURTAIN_ERROR:
                 curtain = False

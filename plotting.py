@@ -7,19 +7,23 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
-from datetime import datetime, timedelta
+import datetime
+import time
+import time
 import sys
 
 def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_ticks=False):
+    print("Trying to plot file {}".format(filename))
+    print(np.loadtxt(filename))
     array = np.loadtxt(filename).transpose()
     
     timestamp = array[0]
     temperature = array[1]
     
-    dates = np.tile(datetime(1900, 1, 1), len(timestamp))
+    dates = np.tile(datetime.datetime(1900, 1, 1), len(timestamp))
     
     for i, stamp in enumerate(timestamp):
-        date = datetime.fromtimestamp(stamp)
+        date = datetime.datetime.fromtimestamp(stamp)
         dates[i] = date
     
     fig, ax = plt.subplots()
@@ -72,9 +76,10 @@ def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_t
     plt.savefig(plotname)
 
 def temp_plot_last(plotname, days=1, hours=0):
-    now = datetime.now()
+    print("Starting plotting")
+    now = datetime.datetime.now()
     
-    begin_date = now - timedelta(days=days, hours=hours)
+    begin_date = now - datetime.timedelta(days=days, hours=hours)
     end_date = now
     
     short_ticks = False
@@ -94,10 +99,24 @@ def temp_plot_last(plotname, days=1, hours=0):
     
     cur_day = now.day
     
+    print("Really plotting now")
     if cur_day <= days:
         temp_plot("logs/temp_log", plotname, begin_date, end_date, hour_interval, short_ticks)
     else:
         temp_plot("logs/temp_log_{}".format(now.strftime("%Y-%m")), plotname, begin_date, end_date, hour_interval, short_ticks)
+    print("Plotting done")
+
+def convert_wrong_format(filename):
+    faulty_array = np.loadtxt(filename, dtype=bytes, delimiter='\t')
+    proper_array = np.array([["a", "b"]])
+    print(faulty_array)
+    for i, line in enumerate(faulty_array):
+        dt_object = datetime.datetime.strptime(line[0].decode("utf-8") , "%Y-%m-%d %H:%M:%S")
+        timestamp = str(time.mktime(dt_object.timetuple()))
+        measurement = line[1].decode("utf-8")
+        proper_array = np.append(proper_array, [[timestamp, measurement]], axis=0)
+    print(proper_array)
+    np.savetxt(filename+"_proper", proper_array, delimiter='\t', fmt="%s")
 
 if __name__ == '__main__':
     arguments = sys.argv

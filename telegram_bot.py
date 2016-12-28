@@ -8,6 +8,7 @@ import os
 import time
 import emoji
 
+import plotting
 from main import write_log
 
 '''Reading configuration'''
@@ -32,6 +33,15 @@ def send_message(text, chat_id, message_id=None):
     else:
         bot_message = {'text': text, 'chat_id': chat_id}
     requests.post("https://api.telegram.org/bot"+TOKEN+"/sendMessage", params=bot_message)
+
+def send_plot(chat_id, message_id=None):
+    if message_id:
+        bot_message = {'chat_id': chat_id, 'reply_to_message_id': message_id}
+    else:
+        bot_message = {'chat_id': chat_id}
+    
+    my_files={'photo': open(os.path.join(THIS_FILE, "plots", "telegram.png"), 'rb')}
+    requests.post("https://api.telegram.org/bot"+TOKEN+"/sendPhoto", params=bot_message, files=my_files)
 
 def status_text(command_queue, status_queue):
     command_queue.put("telegram:request_status")
@@ -84,21 +94,23 @@ def status_text(command_queue, status_queue):
 
 def determine_reply(message_text, command_queue, status_queue):
     reply_text = None
-    if "/night_on" in message_text:
+    if "/status" in message_text:
+        reply_text = status_text(command_queue, status_queue)
+    elif "/night_on" in message_text:
         command_queue.put("command:night_on")
-        reply_text = "It is now night."
+        reply_text = status_text(command_queue, status_queue)
     elif "/night_off" in message_text:
         command_queue.put("command:night_off")
-        reply_text = "It is now day."
+        reply_text = status_text(command_queue, status_queue)
     elif "/night_light_on" in message_text:
         command_queue.put("command:night_light_on")
-        reply_text = "Temporary light on."
+        reply_text = status_text(command_queue, status_queue)
     elif "/night_light_off" in message_text:
         command_queue.put("command:night_light_off")
-        reply_text = "Darkness returns."
+        reply_text = status_text(command_queue, status_queue)
     elif "/clear_alarm" in message_text:
         command_queue.put("command:clear_alarm")
-        reply_text = "Alarm cleared!"
+        reply_text = status_text(command_queue, status_queue)
     
     return reply_text
 
@@ -119,15 +131,19 @@ def handle_message(message, command_queue, status_queue):
             if from_id == USER_ID:
                 reply_text = determine_reply(message_text, command_queue, status_queue)
                 if is_group:
-                    if reply_text:
+                    if reply_text: #we want to send a text reply
                         send_message(reply_text, chat_id, message_id)
-                    if reply_text or "/status" in message_text:
-                        send_message(status_text(command_queue, status_queue), chat_id, message_id)
+                    elif "/graph_temp" in message_text:
+                        plotting.temp_plot_last("plots/telegram.png")
+                        send_plot(chat_id)
                 else:
                     if reply_text:
                         send_message(reply_text, chat_id)
-                    if reply_text or "/status" in message_text:
-                        send_message(status_text(command_queue, status_queue), chat_id)
+                    elif "/graph_temp" in message_text:
+                        send_message("Starting graphing", chat_id)
+                        plotting.temp_plot_last("plots/telegram.png")
+                        send_message("Graphing done", chat_id)
+                        send_plot(chat_id)
             else:
                 if is_group:
                     send_message("No! 3:!", chat_id, message_id)
