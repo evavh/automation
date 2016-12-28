@@ -44,19 +44,23 @@ def first_event_timing():
     return first_event, travel_time
 
 def alarm_time():
-    first_event, travel_time = first_event_timing()
-    routine = datetime.timedelta(minutes=45)
-    extra = datetime.timedelta(minutes=10)
-    total_time = travel_time + routine + extra
-    
-    getup_time = first_event['start'] - total_time
-    
+    timing = first_event_timing()
     sleep_delta = datetime.timedelta(hours=SLEEP_HOURS)
-    #if there is plenty of time to sleep
-    if getup_time - datetime.datetime.now() > sleep_delta:
-        return datetime.datetime.now() + sleep_delta
+    if timing:
+        first_event, travel_time = first_event_timing()
+        routine = datetime.timedelta(minutes=45)
+        extra = datetime.timedelta(minutes=10)
+        total_time = travel_time + routine + extra
+        
+        getup_time = first_event['start'] - total_time
+        
+        #if there is plenty of time to sleep
+        if getup_time - datetime.datetime.now() > sleep_delta:
+            return datetime.datetime.now() + sleep_delta
+        else:
+            return getup_time
     else:
-        return getup_time
+        return datetime.datetime.now() + sleep_delta
 
 def set_cron_alarm(alarm_time):
     my_cron = CronTab(user=True) #load my crontab

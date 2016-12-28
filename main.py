@@ -20,6 +20,7 @@ import tsl2561 #module for light sensor
 import temp_sensor
 import http_commands
 import telegram_bot
+import alarm
 
 '''Reading configuration'''
 from parsed_config import config
@@ -54,7 +55,7 @@ def write_log(message, filename="server_log", date_format=True):
 
 #simple lamp setting function to set lamps to daytime according to user presence
 #only run when something's changed
-def lamp_setter(override, priority_change, present, curtain, night_mode):
+def lamp_setter(override, priority_change, trans_time, present, curtain, night_mode):
     if not override or priority_change: #we are on auto or the change is important
         if present and curtain and not night_mode: #lamps should be on
             new_colour, new_bright = lamp_control.set_to_cur_time()
@@ -176,7 +177,9 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             http_command = command[8:]
             if http_command == "night_on":
                 alarm_time = alarm.alarm_time()
+                print("Setting cron alarm")
                 alarm.set_cron_alarm(alarm_time)
+                print("Cron alarm set")
                 night_mode = True
                 priority_change = True
                 day_event.clear()

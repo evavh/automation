@@ -5,7 +5,7 @@ class mpd_connection():
 # class used to connect to the mpd server with a 'with' statment. This makes
 # sure we always disconnect nicely
     def __init__(self):
-        self.client = musicpd.MPDClient()
+        self.client = MPDClient()
     def __enter__(self):
         self.client.timeout = 10
         self.client.connect("localhost", 6600)
