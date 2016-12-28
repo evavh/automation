@@ -164,7 +164,8 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             status = {'light_level':light_level, 'curtain':curtain,
                       'temp':temp, 'night_mode':night_mode,
                       'present':present, 'lamps_colour':lamps_colour,
-                      'lamps_bright':None, 'lamps_off':lamps_off
+                      'lamps_bright':None, 'lamps_off':lamps_off,
+                      'override':override, 'alarm_time':alarm_time
                      }
             if lamps_bright:
                 status['lamps_bright'] = round((lamps_bright/255)*100)
@@ -177,9 +178,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             http_command = command[8:]
             if http_command == "night_on":
                 alarm_time = alarm.alarm_time()
-                print("Setting cron alarm")
                 alarm.set_cron_alarm(alarm_time)
-                print("Cron alarm set")
                 night_mode = True
                 priority_change = True
                 day_event.clear()
@@ -192,12 +191,16 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             elif http_command == "night_light_on":
                 lamps_off = False
                 lamps_colour = 1000
-                lamps_bright = 1
+                lamps_bright = 3
                 lamp_control.night_light_on()
             elif http_command == "night_light_off":
                 lamps_off = True
                 lamps_colour, lamps_bright = None, None
                 lamp_control.set_off()
+            elif http_command == "clear_alarm":
+                alarm_time = None
+                alarm.clear_alarm()
+                
         
         #unimplemented or faulty commands
         else:
@@ -225,12 +228,12 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             change = False
             priority_change = False
             trans_time = None
-        if new_off is not None:
-            lamps_off = new_off
-        if new_colour:
-            lamps_colour = new_colour
-        if new_bright:
-            lamps_bright = new_bright
+            if new_off is not None:
+                lamps_off = new_off
+            if new_colour:
+                lamps_colour = new_colour
+            if new_bright:
+                lamps_bright = new_bright
         
         command_queue.task_done()
     write_log("server stopped")
