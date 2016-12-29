@@ -81,4 +81,4 @@ def clear_alarm():
 if __name__ == '__main__':
     music.start_shuffle_playlist(alarm_config.WAKEUP_PLAYLIST)
     commands = {'command': 'night_off'}
-    requests.post(alarm_config.LOCAL_URL, params=commands)
+    requests.post("http://127.0.0.1:8080", data=commands)

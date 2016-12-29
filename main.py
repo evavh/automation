@@ -182,7 +182,6 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
                 priority_change = True
                 day_event.clear()
             elif http_command == "night_off":
-                alarm_time = None
                 night_mode = False
                 priority_change = True
                 trans_time = 30
