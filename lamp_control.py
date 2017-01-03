@@ -37,7 +37,7 @@ def lamp_probe():
         else:
             print("{} is off.".format(name))
 
-def set_to_temp(temp, bright, trans_time=0):
+def set_to_temp(temp, bright, trans_time):
     for lamp in LAMPS:
         lamp.transitiontime = trans_time
         lamp.on = True
@@ -98,9 +98,9 @@ def set_off():
 def night_light_on():
     set_to_xy(0.675, 0.322, 1)
 
-def set_to_cur_time():
+def set_to_cur_time(trans_time):
     temp, bright = auto_value_now()
-    set_to_temp(temp, bright)
+    set_to_temp(temp, bright, trans_time)
     return temp, bright
 
 if __name__ == '__main__':

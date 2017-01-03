@@ -58,7 +58,7 @@ def write_log(message, filename="server_log", date_format=True):
 def lamp_setter(override, priority_change, trans_time, present, curtain, night_mode):
     if not override or priority_change: #we are on auto or the change is important
         if present and curtain and not night_mode: #lamps should be on
-            new_colour, new_bright = lamp_control.set_to_cur_time()
+            new_colour, new_bright = lamp_control.set_to_cur_time(trans_time)
             new_off = False
             write_log("lamps set to on, with automatic configuration")
         else: #lamps should be off
@@ -110,7 +110,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
     #nothing has changed yet
     change = False
     priority_change = False
-    trans_time = 0
+    trans_time = None
     
     lamps_off = None
     lamps_colour = None
@@ -225,7 +225,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             new_off, new_colour, new_bright = lamp_setter(override, priority_change, trans_time, present, curtain, night_mode)
             change = False
             priority_change = False
-            trans_time = 0
+            trans_time = None
             if new_off is not None:
                 lamps_off = new_off
             if new_colour:
