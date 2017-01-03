@@ -24,6 +24,8 @@ PORT = int(config['telegram']['PORT'])
 USER_ID = int(config['telegram']['USER_ID'])
 
 THIS_FILE = os.path.dirname(__file__)
+PLOT_FILE = os.path.join(THIS_FILE, "plots", "telegram.png")
+
 PUBLIC_KEY = os.path.join(THIS_FILE, "config", "PUBLIC.pem")
 PRIVATE_KEY = os.path.join(THIS_FILE, "config", "PRIVATE.key")
 
@@ -40,7 +42,7 @@ def send_plot(chat_id, message_id=None):
     else:
         bot_message = {'chat_id': chat_id}
     
-    my_files={'photo': open(os.path.join(THIS_FILE, "plots", "telegram.png"), 'rb')}
+    my_files={'photo': open(PLOT_FILE, 'rb')}
     requests.post("https://api.telegram.org/bot"+TOKEN+"/sendPhoto", params=bot_message, files=my_files)
 
 def status_text(command_queue, status_queue):
@@ -134,14 +136,14 @@ def handle_message(message, command_queue, status_queue):
                     if reply_text: #we want to send a text reply
                         send_message(reply_text, chat_id, message_id)
                     elif "/graph_temp" in message_text:
-                        plotting.temp_plot_last(THIS_FILE+"plots/telegram.png")
+                        plotting.temp_plot_last(PLOT_FILE)
                         send_plot(chat_id)
                 else:
                     if reply_text:
                         send_message(reply_text, chat_id)
                     elif "/graph_temp" in message_text:
                         send_message("Starting graphing", chat_id)
-                        plotting.temp_plot_last("plots/telegram.png")
+                        plotting.temp_plot_last(PLOT_FILE)
                         send_message("Graphing done", chat_id)
                         send_plot(chat_id)
             else:
