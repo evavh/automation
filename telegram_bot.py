@@ -134,7 +134,7 @@ def handle_message(message, command_queue, status_queue):
                     if reply_text: #we want to send a text reply
                         send_message(reply_text, chat_id, message_id)
                     elif "/graph_temp" in message_text:
-                        plotting.temp_plot_last("plots/telegram.png")
+                        plotting.temp_plot_last(THIS_FILE+"plots/telegram.png")
                         send_plot(chat_id)
                 else:
                     if reply_text:

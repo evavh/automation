@@ -11,6 +11,9 @@ import datetime
 import time
 import time
 import sys
+import os
+
+THIS_FILE = os.path.dirname(__file__)
 
 def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_ticks=False):
     print("Trying to plot file {}".format(filename))
@@ -101,9 +104,9 @@ def temp_plot_last(plotname, days=1, hours=0):
     
     print("Really plotting now")
     if cur_day <= days:
-        temp_plot("logs/temp_log", plotname, begin_date, end_date, hour_interval, short_ticks)
+        temp_plot(THIS_FILE+"/logs/temp_log", plotname, begin_date, end_date, hour_interval, short_ticks)
     else:
-        temp_plot("logs/temp_log_{}".format(now.strftime("%Y-%m")), plotname, begin_date, end_date, hour_interval, short_ticks)
+        temp_plot(THIS_FILE+"/logs/temp_log_{}".format(now.strftime("%Y-%m")), plotname, begin_date, end_date, hour_interval, short_ticks)
     print("Plotting done")
 
 def convert_wrong_format(filename):
@@ -121,8 +124,8 @@ def convert_wrong_format(filename):
 if __name__ == '__main__':
     arguments = sys.argv
     if len(arguments) == 2:
-        temp_plot_last("plots/temp_manual_plot", int(arguments[1]))
+        temp_plot_last(THIS_FILE+"/plots/temp_manual_plot", int(arguments[1]))
     elif len(arguments) == 3:
-        temp_plot_last("plots/temp_manual_plot", int(arguments[1]), int(arguments[2]))
+        temp_plot_last(THIS_FILE+"/plots/temp_manual_plot", int(arguments[1]), int(arguments[2]))
     else:
         print("Invalid number of arguments: {}".format(len(sys.argv)-1))

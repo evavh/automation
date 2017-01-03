@@ -110,7 +110,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
     #nothing has changed yet
     change = False
     priority_change = False
-    trans_time = None
+    trans_time = 0
     
     lamps_off = None
     lamps_colour = None
@@ -140,7 +140,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             hour = int(command[5:7])
             minute = int(command[8:10])
             change = True
-            trans_time = 5
+            trans_time = 50
         
         #sensor checking: sets temp and light_level
         elif "sensors:temp" in command:
@@ -184,7 +184,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             elif http_command == "night_off":
                 night_mode = False
                 priority_change = True
-                trans_time = 30
+                trans_time = 300
                 day_event.set()
             elif http_command == "night_light_on":
                 lamps_off = False
@@ -225,7 +225,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             new_off, new_colour, new_bright = lamp_setter(override, priority_change, trans_time, present, curtain, night_mode)
             change = False
             priority_change = False
-            trans_time = None
+            trans_time = 0
             if new_off is not None:
                 lamps_off = new_off
             if new_colour:

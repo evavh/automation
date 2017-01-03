@@ -37,7 +37,7 @@ def lamp_probe():
         else:
             print("{} is off.".format(name))
 
-def set_to_temp(temp, bright, trans_time=None):
+def set_to_temp(temp, bright, trans_time=0):
     for lamp in LAMPS:
         lamp.transitiontime = trans_time
         lamp.on = True
