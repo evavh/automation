@@ -16,7 +16,6 @@ else:
     HOST_NAME = ""
 PORT = int(config['http']['PORT'])
 
-
 def generate_handler(commandqueue, statusqueue):
     class my_handler(BaseHTTPRequestHandler):
         def do_GET(self):

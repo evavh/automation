@@ -86,6 +86,16 @@ def start_thread(function, args, as_daemon=False):
     new_thread.daemon = as_daemon
     new_thread.start()
 
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    if isinstance(obj, datetime.datetime):
+        serial = obj.isoformat()
+        return serial
+    elif obj is None:
+        return None
+    raise TypeError ("Type not serializable")
+
 '''Main function'''
 
 #reads commands from the queue and controls everything
@@ -169,6 +179,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             if lamps_bright:
                 status['lamps_bright'] = round((lamps_bright/255)*100)
             if "http" in command:
+                status['alarm_time'] = json_serial(alarm_time)
                 http_status_queue.put(status)
             elif "telegram" in command:
                 telegram_status_queue.put(status)

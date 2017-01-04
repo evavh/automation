@@ -16,8 +16,6 @@ import os
 THIS_FILE = os.path.dirname(__file__)
 
 def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_ticks=False):
-    print("Trying to plot file {}".format(filename))
-    print(np.loadtxt(filename))
     array = np.loadtxt(filename).transpose()
     
     timestamp = array[0]
@@ -79,7 +77,6 @@ def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_t
     plt.savefig(plotname)
 
 def temp_plot_last(plotname, days=1, hours=0):
-    print("Starting plotting")
     now = datetime.datetime.now()
     
     begin_date = now - datetime.timedelta(days=days, hours=hours)
@@ -102,12 +99,10 @@ def temp_plot_last(plotname, days=1, hours=0):
     
     cur_day = now.day
     
-    print("Really plotting now")
     if cur_day <= days:
         temp_plot(THIS_FILE+"/logs/temp_log", plotname, begin_date, end_date, hour_interval, short_ticks)
     else:
         temp_plot(THIS_FILE+"/logs/temp_log_{}".format(now.strftime("%Y-%m")), plotname, begin_date, end_date, hour_interval, short_ticks)
-    print("Plotting done")
 
 def convert_wrong_format(filename):
     faulty_array = np.loadtxt(filename, dtype=bytes, delimiter='\t')

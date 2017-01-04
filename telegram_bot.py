@@ -29,12 +29,25 @@ PLOT_FILE = os.path.join(THIS_FILE, "plots", "telegram.png")
 PUBLIC_KEY = os.path.join(THIS_FILE, "config", "PUBLIC.pem")
 PRIVATE_KEY = os.path.join(THIS_FILE, "config", "PRIVATE.key")
 
+
+
+KEYBOARD = ([["status", "clear_alarm", "graph_temp"],
+             ["night_on", "night_off"],
+             ["night_light_on", "night_light_off"]])
+
 def send_message(text, chat_id, message_id=None):
     if message_id:
-        bot_message = {'text': text, 'chat_id': chat_id, 'reply_to_message_id': message_id}
+        bot_message = {'text': text, 'chat_id': chat_id, 'reply_to_message_id': message_id,
+                       'reply_markup': json.dumps({"selective": True, "keyboard": KEYBOARD})}
     else:
-        bot_message = {'text': text, 'chat_id': chat_id}
-    requests.post("https://api.telegram.org/bot"+TOKEN+"/sendMessage", params=bot_message)
+        bot_message = {'text': text, 'chat_id': chat_id,
+                       'reply_markup': json.dumps({"selective": False, "keyboard": KEYBOARD})}
+    
+    if text == "<plot>":
+        my_files={'photo': open(PLOT_FILE, 'rb')}
+        requests.post("https://api.telegram.org/bot"+TOKEN+"/sendPhoto", params=bot_message, files=my_files)
+    else:
+        requests.post("https://api.telegram.org/bot"+TOKEN+"/sendMessage", params=bot_message)
 
 def send_plot(chat_id, message_id=None):
     if message_id:
@@ -42,8 +55,7 @@ def send_plot(chat_id, message_id=None):
     else:
         bot_message = {'chat_id': chat_id}
     
-    my_files={'photo': open(PLOT_FILE, 'rb')}
-    requests.post("https://api.telegram.org/bot"+TOKEN+"/sendPhoto", params=bot_message, files=my_files)
+    
 
 def status_text(command_queue, status_queue):
     command_queue.put("telegram:request_status")
@@ -96,21 +108,21 @@ def status_text(command_queue, status_queue):
 
 def determine_reply(message_text, command_queue, status_queue):
     reply_text = None
-    if "/status" in message_text:
+    if "status" in message_text:
         reply_text = status_text(command_queue, status_queue)
-    elif "/night_on" in message_text:
+    elif "night_on" in message_text:
         command_queue.put("command:night_on")
         reply_text = status_text(command_queue, status_queue)
-    elif "/night_off" in message_text:
+    elif "night_off" in message_text:
         command_queue.put("command:night_off")
         reply_text = status_text(command_queue, status_queue)
-    elif "/night_light_on" in message_text:
+    elif "night_light_on" in message_text:
         command_queue.put("command:night_light_on")
         reply_text = status_text(command_queue, status_queue)
-    elif "/night_light_off" in message_text:
+    elif "night_light_off" in message_text:
         command_queue.put("command:night_light_off")
         reply_text = status_text(command_queue, status_queue)
-    elif "/clear_alarm" in message_text:
+    elif "clear_alarm" in message_text:
         command_queue.put("command:clear_alarm")
         reply_text = status_text(command_queue, status_queue)
     
@@ -135,17 +147,16 @@ def handle_message(message, command_queue, status_queue):
                 if is_group:
                     if reply_text: #we want to send a text reply
                         send_message(reply_text, chat_id, message_id)
-                    elif "/graph_temp" in message_text:
+                    elif "graph_temp" in message_text:
                         plotting.temp_plot_last(PLOT_FILE)
-                        send_plot(chat_id)
+                        send_message('<plot>', chat_id)
                 else:
                     if reply_text:
                         send_message(reply_text, chat_id)
-                    elif "/graph_temp" in message_text:
+                    elif "graph_temp" in message_text:
                         send_message("Starting graphing", chat_id)
                         plotting.temp_plot_last(PLOT_FILE)
-                        send_message("Graphing done", chat_id)
-                        send_plot(chat_id)
+                        send_message('<plot>', chat_id)
             else:
                 if is_group:
                     send_message("No! 3:!", chat_id, message_id)
