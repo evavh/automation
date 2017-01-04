@@ -38,25 +38,21 @@ def lamp_probe():
             print("{} is off.".format(name))
 
 def set_to_temp(temp, bright, trans_time):
-    for lamp in LAMPS:
-        lamp.transitiontime = trans_time
-        lamp.on = True
-        lamp.colortemp_k = temp
-        lamp.brightness = bright
+    for lamp_n in BRIDGE.get_api()['lights'].keys():
+        command =  {'transitiontime':trans_time, 'on':True, 'ct':temp, 'bri':bright}
+        BRIDGE.set_light(int(lamp_n), command)
     
     return temp, bright
 
-def set_to_rgb(r, g, b, trans_time=None):
+def set_to_rgb(r, g, b):
     x, y, bright = convert_colour.rgb_to_xy(r, g, b)
     for lamp in LAMPS:
-        lamp.transitiontime = trans_time
         lamp.on = True
         lamp.xy = (x, y)
         lamp.brightness = bright
 
-def set_to_xy(x, y, bright, trans_time=None):
+def set_to_xy(x, y, bright):
     for lamp in LAMPS:
-        lamp.transitiontime = trans_time
         lamp.on = True
         lamp.xy = (x, y)
         lamp.brightness = bright
@@ -104,4 +100,5 @@ def set_to_cur_time(trans_time):
     return temp, bright
 
 if __name__ == '__main__':
+    set_to_temp(2000, 100, 100)
     lamp_probe()
