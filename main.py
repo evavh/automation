@@ -110,7 +110,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
     
     night_mode = False
     night_light = False
-    alarm_time = None
+    alarm_time = alarm.get_cron_alarm()
     
     light_level = -1
     

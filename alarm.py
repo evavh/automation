@@ -73,10 +73,20 @@ def set_cron_alarm(alarm_time):
     
     my_cron.write() #write the changes to the crontab
 
+def get_cron_alarm():
+    my_cron = CronTab(user=True) #load my crontab
+    alarms = list(my_cron.find_comment("automatic_alarm"))
+    if alarms:
+        schedule = alarms[0].schedule(date_from=datetime.datetime.now())
+        return schedule.get_next()
+    else:
+        return None
+
 def clear_alarm():
     my_cron = CronTab(user=True) #load my crontab
     my_cron.remove_all(comment="automatic_alarm") #clean up old entries
     my_cron.write() #write the changes to the crontab
+
 
 if __name__ == '__main__':
     music.start_shuffle_playlist(alarm_config.WAKEUP_PLAYLIST)
