@@ -22,6 +22,8 @@ import http_commands
 import telegram_bot
 import alarm
 
+from helpers import write_log
+
 '''Reading configuration'''
 from parsed_config import config
 
@@ -37,21 +39,6 @@ CURTAIN_THRESHOLD = int(config['thresholds']['CURTAIN'])
 CURTAIN_ERROR = int(config['thresholds']['LIGHT_ERROR'])
 PRESENT_THRESHOLD = int(config['thresholds']['PRESENT'])
 
-THIS_FILE = os.path.dirname(__file__)
-
-'''Helper functions'''
-
-#writes <formatted date>\t<message>\n to log file <filename>
-#parameters: date, filename, message
-def write_log(message, filename="server_log", date_format=True):
-    date = datetime.datetime.now()
-    with open(os.path.join(THIS_FILE, "logs", filename), 'a') as f:
-        if date_format is False:
-            f.write("{}\t{}\n".format(time.time(), message))
-        else:
-            date_string = date.strftime("%Y-%m-%d %H:%M:%S")
-            f.write("{}\t{}\n".format(date_string, message))
-        f.close()
 
 #simple lamp setting function to set lamps to daytime according to user presence
 #only run when something's changed

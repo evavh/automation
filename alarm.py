@@ -11,6 +11,7 @@ from crontab import CronTab
 import google_api
 import music
 from config import alarm_config
+from helpers import write_log
 
 THIS_FILE = os.path.join(os.path.dirname(__file__), "alarm.py")
 
@@ -36,10 +37,15 @@ def first_event_timing():
         r = requests.get(url, params=parameters)
         distance_matrix = r.json()
         
-        travel_seconds = distance_matrix['rows'][0]['elements'][0]['duration']['value']/3
-        travel_time = datetime.timedelta(seconds=travel_seconds)
+        if distance_matrix['rows'][0]['elements'][0]['status'] == 'OK':
+            travel_seconds = distance_matrix['rows'][0]['elements'][0]['duration']['value']/3
+            travel_time = datetime.timedelta(seconds=travel_seconds)
+        else:
+            travel_time = datetime.timedelta(minutes=30)
+            write_log("WARNING: first event location not recognised, using default timing.")
     else:
-        travel_time = datetime.timedelta(minutes=60)
+        travel_time = datetime.timedelta(minutes=30)
+        write_log("WARNING: first event has no location, using default timing.")
     
     return first_event, travel_time
 
@@ -86,7 +92,6 @@ def clear_alarm():
     my_cron = CronTab(user=True) #load my crontab
     my_cron.remove_all(comment="automatic_alarm") #clean up old entries
     my_cron.write() #write the changes to the crontab
-
 
 if __name__ == '__main__':
     music.start_shuffle_playlist(alarm_config.WAKEUP_PLAYLIST)
