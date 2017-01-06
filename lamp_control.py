@@ -39,8 +39,10 @@ def lamp_probe():
 
 def set_to_temp(temp, bright, trans_time):
     for lamp_n in BRIDGE.get_api()['lights'].keys():
-        command =  {'transitiontime':trans_time, 'on':True, 'ct':temp, 'bri':bright}
-        BRIDGE.set_light(int(lamp_n), command)
+        BRIDGE.set_light(int(lamp_n), 'on', True)
+        BRIDGE.set_light(int(lamp_n), 'ct', temp)
+        BRIDGE.set_light(int(lamp_n), 'bri', 0)
+        BRIDGE.set_light(int(lamp_n), 'bri', bright, transitiontime=trans_time)
     
     return temp, bright
 

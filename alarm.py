@@ -79,7 +79,6 @@ def clear_alarm():
     my_cron.write() #write the changes to the crontab
 
 if __name__ == '__main__':
-    #needs external DAC
-    #music.start_shuffle_playlist(alarm_config.WAKEUP_PLAYLIST)
+    music.start_shuffle_playlist(alarm_config.WAKEUP_PLAYLIST)
     commands = {'command': 'night_off'}
     requests.post("http://127.0.0.1:8080", data=commands)
