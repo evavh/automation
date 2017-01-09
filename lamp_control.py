@@ -27,22 +27,23 @@ lamps_by_time = numpy.array([[datetime.time( 8,00), 3500, 255],
 
 def lamp_probe():
     for lamp in LAMPS:
+        number = lamp.light_id
         name = lamp.name
         on = lamp.on
         if on:
             colortemp_k = lamp.colortemp_k
             bright = lamp.brightness
             xy = lamp.xy
-            print("{} is set to {}K, colour {}, at brightness {}.".format(name, colortemp_k, xy, bright))
+            print("Lamp {} ({}) is set to {}K, colour {}, at brightness {}.".format(number, name, colortemp_k, xy, bright))
         else:
-            print("{} is off.".format(name))
+            print("Lamp {} ({}) is off.".format(number, name))
 
 def set_to_temp(temp, bright, trans_time):
-    for lamp_n in BRIDGE.get_api()['lights'].keys():
-        BRIDGE.set_light(int(lamp_n), 'on', True)
-        BRIDGE.set_light(int(lamp_n), 'ct', temp)
-        BRIDGE.set_light(int(lamp_n), 'bri', 0)
-        BRIDGE.set_light(int(lamp_n), 'bri', bright, transitiontime=trans_time)
+    for lamp in LAMPS:
+        lamp.on = True
+        lamp.colortemp_k = temp
+        lamp.brightness = 1
+        BRIDGE.set_light(lamp.light_id, 'bri', bright, transitiontime=trans_time)
     
     return temp, bright
 
@@ -102,5 +103,4 @@ def set_to_cur_time(trans_time):
     return temp, bright
 
 if __name__ == '__main__':
-    set_to_temp(2000, 100, 100)
     lamp_probe()
