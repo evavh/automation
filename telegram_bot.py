@@ -9,6 +9,7 @@ import time
 import emoji
 
 import plotting
+import helpers
 from main import write_log
 
 '''Reading configuration'''
@@ -47,14 +48,7 @@ def send_message(text, chat_id, message_id=None):
         my_files={'photo': open(PLOT_FILE, 'rb')}
         requests.post("https://api.telegram.org/bot"+TOKEN+"/sendPhoto", params=bot_message, files=my_files)
     else:
-        requests.post("https://api.telegram.org/bot"+TOKEN+"/sendMessage", params=bot_message)
-
-def send_plot(chat_id, message_id=None):
-    if message_id:
-        bot_message = {'chat_id': chat_id, 'reply_to_message_id': message_id}
-    else:
-        bot_message = {'chat_id': chat_id}
-    
+        requests.post("https://api.telegram.org/bot"+TOKEN+"/sendMessage", params=bot_message)  
     
 
 def status_text(command_queue, status_queue):
@@ -125,43 +119,49 @@ def determine_reply(message_text, command_queue, status_queue):
     elif "clear_alarm" in message_text:
         command_queue.put("command:clear_alarm")
         reply_text = status_text(command_queue, status_queue)
+    elif "graph_temp" in message_text:
+        start_command = message_text.find("graph_temp")
+        arguments = message_text[start_command:].split()[1:]
+        days = helpers.to_int_if_possible(arguments, 0)
+        if days is not None:
+            hours = helpers.to_int_if_possible(arguments, 1)
+            if hours is not None:
+                plotting.temp_plot_last(PLOT_FILE, days, hours)
+            else:
+                plotting.temp_plot_last(PLOT_FILE, days)
+        else:
+            plotting.temp_plot_last(PLOT_FILE)
+        reply_text = '<plot>' #gets replaced by a plotted picture in send function
     
     return reply_text
 
 def handle_message(message, command_queue, status_queue):
     if message:
-        #extract information
-        message_id = message['message_id']
-        from_id = message['from']['id']
-        from_name = message['from']['first_name']
-        chat_id = message['chat']['id']
-        message_text = message['text']
-        if 'title' in message['chat']:
-            is_group = True
-        else:
-            is_group = False
-        
         if message['date'] > time.time() - 60:
+            #extract information
+            message_id = message['message_id']
+            from_id = message['from']['id']
+            from_name = message['from']['first_name']
+            chat_id = message['chat']['id']
+            message_text = message['text']
+            if 'title' in message['chat']:
+                is_group = True
+            else:
+                is_group = False
+        
             if from_id == USER_ID:
                 reply_text = determine_reply(message_text, command_queue, status_queue)
-                if is_group:
-                    if reply_text: #we want to send a text reply
+                if is_group: #reply to specific message
+                    if reply_text: #we recognise a command to respond to
                         send_message(reply_text, chat_id, message_id)
-                    elif "graph_temp" in message_text:
-                        plotting.temp_plot_last(PLOT_FILE)
-                        send_message('<plot>', chat_id)
-                else:
+                else: #send to private chat
                     if reply_text:
                         send_message(reply_text, chat_id)
-                    elif "graph_temp" in message_text:
-                        send_message("Starting graphing", chat_id)
-                        plotting.temp_plot_last(PLOT_FILE)
-                        send_message('<plot>', chat_id)
             else:
                 if is_group:
-                    send_message("No! 3:!", chat_id, message_id)
+                    send_message("{}, no! 3:!".format(from_name), chat_id, message_id)
                 else:
-                    send_message("No! 3:!", chat_id)
+                    send_message("{}, no! 3:!".format(from_name), chat_id)
 
 #enable the webhook and upload the certificate 
 def init_webhook():
