@@ -9,9 +9,13 @@ import configparser
 import os
 import datetime
 
-def authorization_init(client_id, client_secret, scopes):
+import helpers
+from config import *
+
+def authorization_init():
+    scopes = ["https://www.googleapis.com/auth/calendar.readonly"]
     auth_response = requests.post("https://accounts.google.com/o/oauth2/device/code",
-                                  params={'client_id':client_id, 'scope':scopes})
+                                  params={'client_id':GOOGLE_CLIENT_ID, 'scope':scopes})
     
     auth_response = auth_response.json()
     
@@ -27,8 +31,8 @@ def authorization_init(client_id, client_secret, scopes):
     access = False
     while not access:
         access_response = requests.post("https://www.googleapis.com/oauth2/v4/token",
-                                        params={'client_id':client_id,
-                                        'client_secret':client_secret,
+                                        params={'client_id':GOOGLE_CLIENT_ID,
+                                        'client_secret':GOOGLE_CLIENT_SECRET,
                                         'code':device_code,
                                         'grant_type':"http://oauth.net/grant_type/device/1.0"})
         access_response = access_response.json()
@@ -43,60 +47,39 @@ def authorization_init(client_id, client_secret, scopes):
             access = True
 
     access_token = access_response['access_token']
-    expires_in = access_response['expires_in']
     refresh_token = access_response['refresh_token']
     
-    return access_token, expires_in, refresh_token
+    return access_token, refresh_token
 
-def refresh_access(client_id, client_secret, refresh_token):
+def refresh_access():
     refresh_response = requests.post("https://www.googleapis.com/oauth2/v4/token",
-                                     params={'client_id':client_id,
-                                             'client_secret':client_secret,
-                                             'refresh_token':refresh_token,
+                                     params={'client_id':GOOGLE_CLIENT_ID,
+                                             'client_secret':GOOGLE_CLIENT_SECRET,
+                                             'refresh_token':GOOGLE_REFRESH_TOKEN,
                                              'grant_type':"refresh_token"})
     refresh_response = refresh_response.json()
     
     access_token = refresh_response['access_token']
-    expires_in = refresh_response['expires_in']
     
-    return access_token, expires_in
+    return access_token
 
-def setup():
-    #Load config
-    this_file = os.path.dirname(__file__)
-    config = configparser.RawConfigParser()
-    config.read(os.path.join(this_file, "config", "google_config.ini"))
-    
-    #Check whether config is complete
-    for key in ['client_id', 'client_secret', 'targets', 'hours_ahead']:
-        if not key in config['client_data'] and not key in config['practical']:
-            raise KeyError("Missing key '{}' in config file".format(key))
-    
-    #Load config data
-    client_id = config['client_data']['client_id']
-    client_secret = config['client_data']['client_secret']
-    targets = config['practical']['targets'].split(',')
-    hours_ahead = int(config['practical']['hours_ahead'])
-    
+def setup():   
     #Use old refresh token if available
-    if 'refresh_token' in config['tokens']:
-        refresh_token = config['tokens']['refresh_token']
-        access_token, expires_in = refresh_access(client_id, client_secret, refresh_token)
+    if GOOGLE_REFRESH_TOKEN:
+        access_token = refresh_access()
     else:
         #Initiate new authorization
-        access_token, expires_in, refresh_token = authorization_init(client_id,
-                                                                     client_secret,
-                                                                     ["https://www.googleapis.com/auth/calendar.readonly"])
-        #Write new refresh token to config
-        config['tokens']['refresh_token'] = refresh_token
-        with open("google_config.ini", 'w') as configfile:
-            config.write(configfile)
+        access_token, refresh_token = authorization_init()
+        
+        #Write new refresh token to file and log the fact
+        with open(os.path_join(SERVER_DIRECTORY, "config", "NEW_GOOGLE_REFRESH_TOKEN"), 'w') as tokenfile:
+            tokenfile.write(refresh_token)
+        helpers.write_log("new refresh token created, copy contents of config/NEW_GOOGLE_REFRESH_TOKEN to the appropriate place in config.py")
     
-    return access_token, targets, hours_ahead
-    
+    return access_token
     
 def first_event():
-    access_token, targets, hours_ahead = setup()
+    access_token = setup()
     
     #Get calendar list
     url = "https://www.googleapis.com/calendar/v3/users/me/calendarList"
@@ -106,14 +89,14 @@ def first_event():
     
     #Calculate necessary timestamps for limits
     utc_now = datetime.datetime.utcnow()
-    utc_max = utc_now + datetime.timedelta(hours=hours_ahead)
+    utc_max = utc_now + datetime.timedelta(hours=ALARM_HOURS_AHEAD)
     utc_now = utc_now.isoformat('T')[:19]+'Z'
     utc_max = utc_max.isoformat('T')[:19]+'Z'
     
     #Run through calendar list
     next_event_list = []
     for calendar in calendar_list['items']:
-        if calendar['summary'] in targets:
+        if calendar['summary'] in GOOGLE_CAL_TARGETS:
             
             #Get event list for this calendar
             parameters = {'timeMin':utc_now, 'timeMax':utc_max, 'singleEvents':True, 'orderBy':'startTime'}

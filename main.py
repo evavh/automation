@@ -23,21 +23,7 @@ import telegram_bot
 import alarm
 
 from helpers import write_log
-
-'''Reading configuration'''
-from parsed_config import config
-
-USER_MAC = config['bluetooth']['USER_MAC']
-USER_NAME = config['bluetooth']['USER_NAME']
-
-BLUETOOTH_RATE = int(config['rates']['BLUETOOTH'])
-LIGHT_SENSOR_RATE = int(config['rates']['LIGHT_SENSOR'])
-TEMP_SENSOR_RATE = int(config['rates']['TEMP_SENSOR'])
-TIME_RATE = int(config['rates']['TIME'])
-
-CURTAIN_THRESHOLD = int(config['thresholds']['CURTAIN'])
-CURTAIN_ERROR = int(config['thresholds']['LIGHT_ERROR'])
-PRESENT_THRESHOLD = int(config['thresholds']['PRESENT'])
+from config import *
 
 
 #simple lamp setting function to set lamps to daytime according to user presence

@@ -7,14 +7,7 @@ import time
 import cgi
 import json
 
-'''Reading configuration'''
-from parsed_config import config
-
-if 'HOST_NAME' in config['http']:
-    HOST_NAME = config['http']['HOST_NAME']
-else:
-    HOST_NAME = ""
-PORT = int(config['http']['PORT'])
+from config import *
 
 def generate_handler(commandqueue, statusqueue):
     class my_handler(BaseHTTPRequestHandler):
@@ -54,7 +47,7 @@ def generate_handler(commandqueue, statusqueue):
     return my_handler
 
 def http_function(commandqueue, statusqueue):
-    my_server = HTTPServer((HOST_NAME, PORT), generate_handler(commandqueue, statusqueue))
+    my_server = HTTPServer((HOST_NAME, HTTP_PORT), generate_handler(commandqueue, statusqueue))
     
     try:
           my_server.serve_forever()

@@ -2,11 +2,11 @@ import os
 import datetime
 import time
 
-THIS_FILE = os.path.dirname(__file__)
+from config import *
 
 def write_log(message, filename="server_log", date_format=True):
     date = datetime.datetime.now()
-    with open(os.path.join(THIS_FILE, "logs", filename), 'a') as f:
+    with open(os.path.join(SERVER_DIRECTORY, "logs", filename), 'a') as f:
         if date_format is False:
             f.write("{}\t{}\n".format(time.time(), message))
         else:

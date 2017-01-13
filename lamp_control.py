@@ -5,25 +5,12 @@
 #temp is colour temperature, bright is brightness
 
 import datetime
-import numpy
 import phue
 
-import convert_colour
-from parsed_config import config
-
-BRIDGE_IP = config['hue']['BRIDGE_IP']
+from config import *
 
 BRIDGE = phue.Bridge(BRIDGE_IP)
 LAMPS = BRIDGE.get_light_objects()
-
-lamps_by_time = numpy.array([[datetime.time( 8,00), 3500, 255],
-                             [datetime.time(20,00), 3000, 255],
-                             [datetime.time(20,30), 3000, 255],
-                             [datetime.time(21,00), 2800, 255],
-                             [datetime.time(21,30), 2500, 200],
-                             [datetime.time(22,00), 2300, 150],
-                             [datetime.time(22,30), 2000, 100],
-                             [datetime.time(23,00), 2000,  50]]).transpose().tolist()
 
 def lamp_probe():
     for lamp in LAMPS:
@@ -47,13 +34,6 @@ def set_to_temp(temp, bright, trans_time):
     
     return temp, bright
 
-def set_to_rgb(r, g, b):
-    x, y, bright = convert_colour.rgb_to_xy(r, g, b)
-    for lamp in LAMPS:
-        lamp.on = True
-        lamp.xy = (x, y)
-        lamp.brightness = bright
-
 def set_to_xy(x, y, bright):
     for lamp in LAMPS:
         lamp.on = True
@@ -65,16 +45,16 @@ def auto_value_now():
     minute = datetime.datetime.now().minute
     time_to_check = datetime.time(hour, minute)
     
-    n_times = len(lamps_by_time[0])
+    n_times = len(LAMPS_BY_TIME[0])
     
-    for (i, time) in enumerate(lamps_by_time[0]):
+    for (i, time) in enumerate(LAMPS_BY_TIME[0]):
         if time_to_check < time:
-            if time_to_check >= lamps_by_time[0][i-1]:
-                temp = lamps_by_time[1][i-1]
-                bright = lamps_by_time[2][i-1]
+            if time_to_check >= LAMPS_BY_TIME[0][i-1]:
+                temp = LAMPS_BY_TIME[1][i-1]
+                bright = LAMPS_BY_TIME[2][i-1]
                 return temp, bright
-    temp = lamps_by_time[1][n_times-1]
-    bright = lamps_by_time[2][n_times-1]
+    temp = LAMPS_BY_TIME[1][n_times-1]
+    bright = LAMPS_BY_TIME[2][n_times-1]
     return temp, bright
 
 def is_override():

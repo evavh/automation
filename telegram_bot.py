@@ -10,27 +10,7 @@ import emoji
 
 import plotting
 import helpers
-from main import write_log
-
-'''Reading configuration'''
-from parsed_config import config
-
-if 'HOST_NAME' in config['http']:
-    HOST_NAME = config['http']['HOST_NAME']
-else:
-    HOST_NAME = ""
-TOKEN = config['telegram']['TOKEN']
-URL = config['telegram']['URL']
-PORT = int(config['telegram']['PORT'])
-USER_ID = int(config['telegram']['USER_ID'])
-
-THIS_FILE = os.path.dirname(__file__)
-PLOT_FILE = os.path.join(THIS_FILE, "plots", "telegram.png")
-
-PUBLIC_KEY = os.path.join(THIS_FILE, "config", "PUBLIC.pem")
-PRIVATE_KEY = os.path.join(THIS_FILE, "config", "PRIVATE.key")
-
-
+from config import *
 
 KEYBOARD = ([["status", "clear_alarm", "graph_temp"],
              ["night_on", "night_off"],
@@ -45,10 +25,10 @@ def send_message(text, chat_id, message_id=None):
                        'reply_markup': json.dumps({"selective": False, "keyboard": KEYBOARD})}
     
     if text == "<plot>":
-        my_files={'photo': open(PLOT_FILE, 'rb')}
-        requests.post("https://api.telegram.org/bot"+TOKEN+"/sendPhoto", params=bot_message, files=my_files)
+        my_files={'photo': open(TELEGRAM_PLOT_FILE, 'rb')}
+        requests.post("https://api.telegram.org/bot"+TELEGRAM_TOKEN+"/sendPhoto", params=bot_message, files=my_files)
     else:
-        requests.post("https://api.telegram.org/bot"+TOKEN+"/sendMessage", params=bot_message)  
+        requests.post("https://api.telegram.org/bot"+TELEGRAM_TOKEN+"/sendMessage", params=bot_message)  
     
 
 def status_text(command_queue, status_queue):
@@ -126,11 +106,11 @@ def determine_reply(message_text, command_queue, status_queue):
         if days is not None:
             hours = helpers.to_int_if_possible(arguments, 1)
             if hours is not None:
-                plotting.temp_plot_last(PLOT_FILE, days, hours)
+                plotting.temp_plot_last(TELEGRAM_PLOT_FILE, days, hours)
             else:
-                plotting.temp_plot_last(PLOT_FILE, days)
+                plotting.temp_plot_last(TELEGRAM_PLOT_FILE, days)
         else:
-            plotting.temp_plot_last(PLOT_FILE)
+            plotting.temp_plot_last(TELEGRAM_PLOT_FILE)
         reply_text = '<plot>' #gets replaced by a plotted picture in send function
     
     return reply_text
@@ -149,7 +129,7 @@ def handle_message(message, command_queue, status_queue):
             else:
                 is_group = False
         
-            if from_id == USER_ID:
+            if from_id == TELEGRAM_USER_ID:
                 reply_text = determine_reply(message_text, command_queue, status_queue)
                 if is_group: #reply to specific message
                     if reply_text: #we recognise a command to respond to
@@ -165,15 +145,15 @@ def handle_message(message, command_queue, status_queue):
 
 #enable the webhook and upload the certificate 
 def init_webhook():
-    params = {'url': URL+':'+str(PORT)+'/'}
-    r = requests.get("https://api.telegram.org/bot"+TOKEN+"/setWebhook", 
+    params = {'url': MY_URL+':'+str(TELEGRAM_PORT)+'/'}
+    r = requests.get("https://api.telegram.org/bot"+TELEGRAM_TOKEN+"/setWebhook", 
                       params=params,
-                      files={'certificate' : open(PUBLIC_KEY, 'r')})
+                      files={'certificate' : open(TELEGRAM_PUBLIC_KEY, 'r')})
     reply = r.json()
     if reply['result'] and reply['ok']:
-        write_log("telegram webhook set succesfully")
+        helpers.write_log("telegram webhook set succesfully")
     else:
-        write_log("no telegram webhook set, server replied: {}".format(reply))
+        helpers.write_log("no telegram webhook set, server replied: {}".format(reply))
 
 def generate_handler(command_queue, status_queue):
     #used to pass above vars to myhandler class in a way that works..... je zet
@@ -201,10 +181,10 @@ def generate_handler(command_queue, status_queue):
     
 def bot_server_function(command_queue, status_queue):
     init_webhook()
-    bot_server = HTTPServer((HOST_NAME, PORT), generate_handler(command_queue, status_queue))
+    bot_server = HTTPServer((HOST_NAME, TELEGRAM_PORT), generate_handler(command_queue, status_queue))
     bot_server.socket = ssl.wrap_socket(bot_server.socket, 
-                                        certfile=PUBLIC_KEY,
-                                        keyfile=PRIVATE_KEY,
+                                        certfile=TELEGRAM_PUBLIC_KEY,
+                                        keyfile=TELEGRAM_PRIVATE_KEY,
                                         server_side=True)
     try:
         bot_server.serve_forever()
