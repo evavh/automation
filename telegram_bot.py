@@ -99,16 +99,24 @@ def determine_reply(message_text, command_queue, status_queue):
         command_queue.put("command:night_light_off")
         reply_text = status_text(command_queue, status_queue)
     elif "get_alarm" in message_text:
-        reply_text = "Alarm would be set for {:%H:%M}".format(alarm.alarm_time())
+        reply_text = "Alarm would be set for {:%H:%M}.".format(alarm.alarm_time())
     elif "clear_alarm" in message_text:
         command_queue.put("command:clear_alarm")
         reply_text = status_text(command_queue, status_queue)
     elif "alarm+15" in message_text:
-        alarm.set_cron_alarm(alarm.get_cron_alarm() + datetime.timedelta(minutes=15))
-        reply_text = status_text(command_queue, status_queue)
+        old_alarm_time = alarm.get_cron_alarm()
+        if old_alarm_time:
+            alarm.set_cron_alarm(old_alarm_time + datetime.timedelta(minutes=15))
+            reply_text = status_text(command_queue, status_queue)
+        else:
+            reply_text = "No alarm set."
     elif "alarm-15" in message_text:
-        alarm.set_cron_alarm(alarm.get_cron_alarm() - datetime.timedelta(minutes=15))
-        reply_text = status_text(command_queue, status_queue)
+        old_alarm_time = alarm.get_cron_alarm()
+        if old_alarm_time:
+            alarm.set_cron_alarm(old_alarm_time - datetime.timedelta(minutes=15))
+            reply_text = status_text(command_queue, status_queue)
+        else:
+            reply_text = "No alarm set."
     elif "graph_temp" in message_text:
         start_command = message_text.find("graph_temp")
         arguments = message_text[start_command:].split()[1:]
