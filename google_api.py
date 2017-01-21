@@ -79,6 +79,8 @@ def setup():
     return access_token
     
 def first_event():
+    print("Start calendar request")
+    start = datetime.datetime.now()
     access_token = setup()
     
     #Get calendar list
@@ -130,6 +132,10 @@ def first_event():
     else:
         sorted_list = sorted(next_event_list, key=lambda k: k['start'])
         first_event = sorted_list[0]
+    
+    end = datetime.datetime.now()
+    diff = end - start
+    print("End calendar request after {}".format(diff.total_seconds()))
     
     return first_event
 

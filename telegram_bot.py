@@ -10,9 +10,11 @@ import emoji
 
 import plotting
 import helpers
+import alarm
 from config import *
 
-KEYBOARD = ([["status", "clear_alarm", "graph_temp"],
+KEYBOARD = ([["status", "get_alarm", "graph_temp"],
+             ["alarm-15", "clear_alarm", "alarm+15"],
              ["night_on", "night_off"],
              ["night_light_on", "night_light_off"]])
 
@@ -96,8 +98,16 @@ def determine_reply(message_text, command_queue, status_queue):
     elif "night_light_off" in message_text:
         command_queue.put("command:night_light_off")
         reply_text = status_text(command_queue, status_queue)
+    elif "get_alarm" in message_text:
+        reply_text = "Alarm would be set for {:%H:%M}".format(alarm.alarm_time())
     elif "clear_alarm" in message_text:
         command_queue.put("command:clear_alarm")
+        reply_text = status_text(command_queue, status_queue)
+    elif "alarm+15" in message_text:
+        alarm.set_cron_alarm(alarm.get_cron_alarm() + datetime.timedelta(minutes=15))
+        reply_text = status_text(command_queue, status_queue)
+    elif "alarm-15" in message_text:
+        alarm.set_cron_alarm(alarm.get_cron_alarm() - datetime.timedelta(minutes=15))
         reply_text = status_text(command_queue, status_queue)
     elif "graph_temp" in message_text:
         start_command = message_text.find("graph_temp")

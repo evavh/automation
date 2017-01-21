@@ -143,6 +143,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
                 change = True
         
         elif "request_status" in command:
+            alarm_time = alarm.get_cron_alarm()
             status = {'light_level':light_level, 'curtain':curtain,
                       'temp':temp, 'night_mode':night_mode,
                       'present':present, 'lamps_colour':lamps_colour,
@@ -237,7 +238,7 @@ def time_function(command_queue):
         #check if we need to send a command, if so send it
         hour = datetime.datetime.now().hour
         minute = datetime.datetime.now().minute
-        if datetime.time(hour, minute) in lamp_control.lamps_by_time[0]:
+        if datetime.time(hour, minute) in LAMPS_BY_TIME[0]:
             cur_time = datetime.datetime.now().strftime("%H:%M")
             command = "time:{}".format(cur_time)
             command_queue.put(command)
