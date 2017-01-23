@@ -81,7 +81,10 @@ def night_light_on():
 
 def set_to_cur_time(trans_time):
     temp, bright = auto_value_now()
-    set_to_temp(temp, bright, trans_time)
+    if trans_time:
+        set_to_temp(temp, bright, trans_time)
+    else:
+        set_to_temp(temp, bright)
     return temp, bright
 
 if __name__ == '__main__':

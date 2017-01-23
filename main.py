@@ -123,7 +123,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             hour = int(command[5:7])
             minute = int(command[8:10])
             change = True
-            trans_time = 50
+            trans_time = 5
         
         #sensor checking: sets temp and light_level
         elif "sensors:temp" in command:
@@ -169,7 +169,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             elif http_command == "night_off":
                 night_mode = False
                 priority_change = True
-                trans_time = 300
+                trans_time = 30
                 day_event.set()
             elif http_command == "night_light_on":
                 lamps_off = False
