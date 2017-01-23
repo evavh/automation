@@ -70,7 +70,7 @@ def is_override():
         if lamp['state']['on']:
             auto_temp, auto_bright = auto_value_now()
             lamp_temp_mir = lamp['state']['ct']
-            lamp_temp_k = int(1000000 / temp_mir)
+            lamp_temp_k = int(1000000 / lamp_temp_mir)
             lamp_bright = lamp['state']['bri']
             if abs(lamp_temp_k-auto_temp) > 100 or abs(lamp_bright-auto_bright) > 10:
                 return True #at least one lamp does not have auto's values -> not auto
