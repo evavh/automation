@@ -26,13 +26,17 @@ def lamp_probe():
         else:
             print("Lamp {} ({}) is off.".format(lamp_num, name))
 
-def set_to_temp(temp_k, bright, trans_time_s=0.4):
-    trans_time_ds = 10*trans_time_s
+def set_to_temp(temp_k, bright, trans_time_s): 
+    already_on = BRIDGE.lights[1]()['state']['on']
     temp_mir = int(1000000 / temp_k)
     for lamp_num in LAMPS:
         BRIDGE.lights[lamp_num].state(on=True)
-        BRIDGE.lights[lamp_num].state(ct=temp_mir, bri=bright, transitiontime=trans_time_ds)
-    
+        if trans_time_s:
+            if not already_on:
+                night_light_on()
+            BRIDGE.lights[lamp_num].state(ct=temp_mir, bri=bright, transitiontime=10*trans_time_s)
+        else: 
+            BRIDGE.lights[lamp_num].state(ct=temp_mir, bri=bright)
     return temp_k, bright
 
 def set_off():
@@ -81,10 +85,7 @@ def night_light_on():
 
 def set_to_cur_time(trans_time):
     temp, bright = auto_value_now()
-    if trans_time:
-        set_to_temp(temp, bright, trans_time)
-    else:
-        set_to_temp(temp, bright)
+    set_to_temp(temp, bright, trans_time)
     return temp, bright
 
 if __name__ == '__main__':

@@ -169,7 +169,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             elif http_command == "night_off":
                 night_mode = False
                 priority_change = True
-                trans_time = 30
+                trans_time = 300
                 day_event.set()
             elif http_command == "night_light_on":
                 lamps_off = False
