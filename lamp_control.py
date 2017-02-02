@@ -34,6 +34,7 @@ def set_to_temp(temp_k, bright, trans_time_s):
         if trans_time_s:
             if not already_on:
                 night_light_on()
+                time.sleep(1)
             BRIDGE.lights[lamp_num].state(ct=temp_mir, bri=bright, transitiontime=10*trans_time_s)
         else: 
             BRIDGE.lights[lamp_num].state(ct=temp_mir, bri=bright)
