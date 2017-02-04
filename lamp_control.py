@@ -13,6 +13,8 @@ from config import *
 BRIDGE = qhue.Bridge(BRIDGE_IP, BRIDGE_USERNAME)
 LAMPS = BRIDGE.lights()
 
+MINIMAL_XY = (0.6205, 0.362)
+
 def lamp_probe():
     for lamp_num in LAMPS:
         lamp = BRIDGE.lights[lamp_num]()
@@ -33,8 +35,7 @@ def set_to_temp(temp_k, bright, trans_time_s):
         BRIDGE.lights[lamp_num].state(on=True)
         if trans_time_s:
             if not already_on:
-                night_light_on()
-                time.sleep(1)
+                BRIDGE.lights[lamp_num].state(xy=MINIMAL_XY, bri=1)
             BRIDGE.lights[lamp_num].state(ct=temp_mir, bri=bright, transitiontime=10*trans_time_s)
         else: 
             BRIDGE.lights[lamp_num].state(ct=temp_mir, bri=bright)
@@ -82,7 +83,7 @@ def is_override():
     return False
 
 def night_light_on():
-    set_to_xy(0.675, 0.322, 1)
+    set_to_xy(MINIMAL_XY[0], MINIMAL_XY[1], 1)
 
 def set_to_cur_time(trans_time):
     temp, bright = auto_value_now()

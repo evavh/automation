@@ -123,7 +123,6 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             hour = int(command[5:7])
             minute = int(command[8:10])
             change = True
-            trans_time = 5
         
         #sensor checking: sets temp and light_level
         elif "sensors:temp" in command:
