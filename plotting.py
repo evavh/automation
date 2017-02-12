@@ -4,6 +4,7 @@
 #hour to plot the last timeslot of temperature readings
 
 import numpy as np
+import math
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
@@ -21,10 +22,17 @@ def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_t
     temperature = array[1]
     
     dates = np.tile(datetime.datetime(1900, 1, 1), len(timestamp))
+    begin_found = False
+    end_found = False
     
     for i, stamp in enumerate(timestamp):
         date = datetime.datetime.fromtimestamp(stamp)
         dates[i] = date
+        if not begin_found and abs(date - begin_date) < datetime.timedelta(minutes=10):
+            begin_index = i
+        if not end_found and abs(date - end_date) < datetime.timedelta(minutes=10):
+            end_index = i
+        
     
     fig, ax = plt.subplots()
     
@@ -42,7 +50,10 @@ def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_t
         plt.tick_params(axis='x', pad=20)
         plt.xlabel("Hour and date")
     
+    temperature_to_plot = temperature[begin_index:end_index]
+    
     plt.ylabel("Temperature [C]")
+    plt.ylim(math.floor(min(temperature_to_plot)), math.ceil(max(temperature_to_plot)))
     plt.xlim(begin_date, end_date)
     
     plt.grid(which='major', axis='both', linestyle='dashed')
