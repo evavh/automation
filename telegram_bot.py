@@ -146,8 +146,9 @@ def handle_message(message, command_queue, status_queue):
                 is_group = True
             else:
                 is_group = False
-        
-            if from_id == TELEGRAM_USER_ID:
+            
+            print(from_id, from_name)
+            if from_id in TELEGRAM_USER_IDS:
                 reply_text = determine_reply(message_text, command_queue, status_queue)
                 if is_group: #reply to specific message
                     if reply_text: #we recognise a command to respond to
@@ -197,7 +198,7 @@ def generate_handler(command_queue, status_queue):
             return
     return my_handler
     
-def bot_server_function(command_queue, status_queue):
+def bot_server_function(command_queue=None, status_queue=None):
     init_webhook()
     bot_server = HTTPServer((HOST_NAME, TELEGRAM_PORT), generate_handler(command_queue, status_queue))
     bot_server.socket = ssl.wrap_socket(bot_server.socket, 
