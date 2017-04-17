@@ -29,7 +29,7 @@ from config import *
 #simple lamp setting function to set lamps to daytime according to user presence
 #only run when something's changed
 def lamp_setter(override, priority_change, trans_time, present, curtain, night_mode):
-    print("lamp_setter run")
+    write_log("lamp_setter run, with override {}, priority_change {}, present {}, curtain {} and night_mode {}".format(override, priority_change, present, curtain, night_mode))
     if not override or priority_change: #we are on auto or the change is important
         if present and curtain and not night_mode: #lamps should be on
             new_colour, new_bright = lamp_control.set_to_cur_time(trans_time)
