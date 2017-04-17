@@ -85,6 +85,9 @@ def is_override():
 def night_light_on():
     set_to_xy(MINIMAL_XY[0], MINIMAL_XY[1], 1)
 
+def notify():
+    BRIDGE.lights[1].state(alert="select")
+
 def set_to_cur_time(trans_time):
     temp, bright = auto_value_now()
     set_to_temp(temp, bright, trans_time)

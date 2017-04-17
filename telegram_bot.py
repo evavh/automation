@@ -11,11 +11,12 @@ import emoji
 import plotting
 import helpers
 import alarm
+import lamp_control
 from config import *
 
 KEYBOARD = ([["status", "get_alarm", "graph_temp"],
              ["alarm-15", "clear_alarm", "alarm+15"],
-             ["night_on", "night_off"],
+             ["night_on", "notify", "night_off"],
              ["night_light_on", "night_light_off"]])
 
 def send_message(text, chat_id, message_id=None):
@@ -130,6 +131,9 @@ def determine_reply(message_text, command_queue, status_queue):
         else:
             plotting.temp_plot_last(TELEGRAM_PLOT_FILE)
         reply_text = '<plot>' #gets replaced by a plotted picture in send function
+    elif "notify" in message_text:
+        lamp_control.notify()
+        reply_text = "User has been notified."
     
     return reply_text
 
