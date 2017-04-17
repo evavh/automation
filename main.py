@@ -29,6 +29,7 @@ from config import *
 #simple lamp setting function to set lamps to daytime according to user presence
 #only run when something's changed
 def lamp_setter(override, priority_change, trans_time, present, curtain, night_mode):
+    print("lamp_setter run")
     if not override or priority_change: #we are on auto or the change is important
         if present and curtain and not night_mode: #lamps should be on
             new_colour, new_bright = lamp_control.set_to_cur_time(trans_time)
@@ -52,7 +53,7 @@ def thread_exception_handling(function, args):
     try:
         function(*args)
     except:
-        write_log(traceback.format_exception_only(sys.exc_info()[0], sys.exc_info()[1])[0][:-1])
+        write_log(traceback.format_exc())#eption_only(sys.exc_info()[0], sys.exc_info()[1])[0][:-1])
 
 def start_thread(function, args, as_daemon=False):
     new_thread = threading.Thread(target=thread_exception_handling, args=(function,args))

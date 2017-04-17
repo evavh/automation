@@ -47,8 +47,8 @@ def alarm_time():
     sleep_delta = datetime.timedelta(hours=OPTIMAL_SLEEP_HOURS)
     if timing:
         first_event, travel_time = timing
-        routine = datetime.timedelta(minutes=45)
-        extra = datetime.timedelta(minutes=10)
+        routine = datetime.timedelta(minutes=ROUTINE_MINUTES)
+        extra = datetime.timedelta(minutes=EXTRA_MINUTES)
         total_time = travel_time + routine + extra
         
         getup_time = first_event['start'] - total_time
