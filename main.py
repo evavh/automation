@@ -52,8 +52,18 @@ def lamp_setter(override, priority_change, trans_time, present, curtain, night_m
 def thread_exception_handling(function, args):
     try:
         function(*args)
-    except:
-        write_log(traceback.format_exc())#eption_only(sys.exc_info()[0], sys.exc_info()[1])[0][:-1])
+    except requests.exceptions.ReadTimeout:
+        write_log("A requests ReadTimeout exception has been caught.")
+        raise
+    except Exception as excp:
+      #an exception coming from the tsl2561 library that can probably be ignored
+        if excp.args[0] == 'Sensor is saturated':
+            #so we restart this function for the light sensor
+            thread_exception_handling(light_sensor_function, (command_queue, present_event, day_event))
+            write_log("A light sensor saturation exception was ignored, light sensor function restarted.")
+            pass
+        else:
+            write_log(traceback.format_exc())#eption_only(sys.exc_info()[0], sys.exc_info()[1])[0][:-1])
 
 def start_thread(function, args, as_daemon=False):
     new_thread = threading.Thread(target=thread_exception_handling, args=(function,args))
@@ -207,6 +217,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
         
         #setting the lights if something has changed
         if change or priority_change:
+            write_log("command {} triggered light_setter".format(command))
             new_off, new_colour, new_bright = lamp_setter(override, priority_change, trans_time, present, curtain, night_mode)
             change = False
             priority_change = False
