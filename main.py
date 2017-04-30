@@ -29,17 +29,16 @@ from config import *
 #simple lamp setting function to set lamps to daytime according to user presence
 #only run when something's changed
 def lamp_setter(override, priority_change, trans_time, present, curtain, night_mode):
-    write_log("lamp_setter run, with override {}, priority_change {}, present {}, curtain {} and night_mode {}".format(override, priority_change, present, curtain, night_mode))
     if not override or priority_change: #we are on auto or the change is important
         if present and curtain and not night_mode: #lamps should be on
             new_colour, new_bright = lamp_control.set_to_cur_time(trans_time)
             new_off = False
-            write_log("lamps set to on, with automatic configuration")
+            #write_log("lamps set to on, with automatic configuration")
         else: #lamps should be off
             lamp_control.set_off()
             new_colour, new_bright = None, None
             new_off = True
-            write_log("lamps set to off")
+            #write_log("lamps set to off")
     else: #we are on override and the change has no priority over it
         new_colour, new_bright = None, None
         new_off = None
@@ -217,7 +216,8 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
         
         #setting the lights if something has changed
         if change or priority_change:
-            write_log("command {} triggered light_setter".format(command))
+            if "time" in command:
+              write_log("{} triggered light_setter".format(command))
             new_off, new_colour, new_bright = lamp_setter(override, priority_change, trans_time, present, curtain, night_mode)
             change = False
             priority_change = False
