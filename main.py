@@ -55,6 +55,9 @@ def thread_exception_handling(function, args):
     except requests.exceptions.ReadTimeout:
         write_log("A requests ReadTimeout exception has been caught.")
         raise
+    except requests.exceptions.ConnectionError:
+        write_log("A requests ReadTimeout exception has been caught.")
+        raise
     except Exception as excp:
       #an exception coming from the tsl2561 library that can probably be ignored
         if excp.args[0] == 'Sensor is saturated':
