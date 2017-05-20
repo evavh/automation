@@ -53,20 +53,19 @@ def thread_exception_handling(function, args):
     try:
         function(*args)
     except requests.exceptions.ReadTimeout:
-        write_log("A requests ReadTimeout exception has been caught.")
-        raise
+        write_log("A requests ReadTimeout exception has been caught and ignored.")
+        pass
     except requests.exceptions.ConnectionError:
-        write_log("A requests ReadTimeout exception has been caught.")
-        raise
+        write_log("A requests ConnectionError exception has been caught and ignored.")
+        pass
     except Exception as excp:
       #an exception coming from the tsl2561 library that can probably be ignored
         if excp.args[0] == 'Sensor is saturated':
-            #so we restart this function for the light sensor
-            thread_exception_handling(light_sensor_function, (command_queue, present_event, day_event))
-            write_log("A light sensor saturation exception was ignored, light sensor function restarted.")
+            write_log("A light sensor saturation exception has been ignored.")
             pass
         else:
             write_log(traceback.format_exc())#eption_only(sys.exc_info()[0], sys.exc_info()[1])[0][:-1])
+            exit(1)
 
 def start_thread(function, args, as_daemon=False):
     new_thread = threading.Thread(target=thread_exception_handling, args=(function,args))
