@@ -58,14 +58,9 @@ def thread_exception_handling(function, args):
     except requests.exceptions.ConnectionError:
         write_log("A requests ConnectionError exception has been caught and ignored.")
         pass
-    except Exception as excp:
-      #an exception coming from the tsl2561 library that can probably be ignored
-        if excp.args[0] == 'Sensor is saturated':
-            write_log("A light sensor saturation exception has been ignored.")
-            pass
-        else:
-            write_log(traceback.format_exc())#eption_only(sys.exc_info()[0], sys.exc_info()[1])[0][:-1])
-            exit(1)
+    except:
+      write_log(traceback.format_exc())#eption_only(sys.exc_info()[0], sys.exc_info()[1])[0][:-1])
+      exit(1)
 
 def start_thread(function, args, as_daemon=False):
     new_thread = threading.Thread(target=thread_exception_handling, args=(function,args))
@@ -294,18 +289,24 @@ def temp_sensor_function(command_queue):
 def light_sensor_function(command_queue, present_event, day_event):
     tsl = tsl2561.TSL2561()
     while True:
-        present_event.wait()
-        day_event.wait()
-        
-        start = datetime.datetime.now()
-        
-        light = int(tsl.lux())
-        command_queue.put("sensors:light:{}".format(light))
-        
-        end = datetime.datetime.now()
-        dt = (end - start).total_seconds()
-        if LIGHT_SENSOR_RATE > dt:
-            time.sleep(LIGHT_SENSOR_RATE-dt)
+        try:
+            present_event.wait()
+            day_event.wait()
+            
+            start = datetime.datetime.now()
+            
+            light = int(tsl.lux())
+            command_queue.put("sensors:light:{}".format(light))
+            
+            end = datetime.datetime.now()
+            dt = (end - start).total_seconds()
+            if LIGHT_SENSOR_RATE > dt:
+                time.sleep(LIGHT_SENSOR_RATE-dt)
+        except Exception as excp:
+            if excp.args[0] == 'Sensor is saturated':
+                tsl = tsl2561.TSL2561()
+                write_log("Light sensor saturation, tsl2561 object regenerated.")
+                pass
 
 if __name__ == '__main__':
     write_log("starting server")

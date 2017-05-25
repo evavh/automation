@@ -80,7 +80,7 @@ def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_t
     
     
     plt.plot(dates, low_temp, color='b')
-    plt.plot(dates, med_temp, color='orange')
+    plt.plot(dates, med_temp, color='g')
     plt.plot(dates, high_temp, color='r')
     
     plt.tight_layout()
