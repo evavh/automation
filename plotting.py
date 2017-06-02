@@ -16,6 +16,7 @@ import os
 from config import *
 
 def temp_plot(filename, plotname, begin_date, end_date, hour_interval=1, short_ticks=False):
+    print("Starting to read ", filename)
     array = np.loadtxt(filename).transpose()
     
     timestamp = array[0]
