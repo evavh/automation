@@ -45,6 +45,7 @@ def first_event_timing():
 def alarm_time():
     timing = first_event_timing()
     sleep_delta = datetime.timedelta(hours=OPTIMAL_SLEEP_HOURS)
+    
     if timing:
         first_event, travel_time = timing
         routine = datetime.timedelta(minutes=ROUTINE_MINUTES)
@@ -53,13 +54,28 @@ def alarm_time():
         
         getup_time = first_event['start'] - total_time
         
-        #if there is plenty of time to sleep
-        if getup_time - datetime.datetime.now() > sleep_delta:
-            return datetime.datetime.now() + sleep_delta
-        else:
+        helpers.write_log("Calculated with event timing: {}".format(getup_time))
+        
+        #if we really need to get up in time
+        if getup_time - datetime.datetime.now() <= sleep_delta:
             return getup_time
+    
+    #if there is plenty of time to sleep
+    #wake up at the right time
+    if OPTIMAL_WAKEUP_HOUR != -1 and OPTIMAL_WAKEUP_MINUTE != -1:
+        now = datetime.datetime.now()
+        optimal_wakeup_time = now #get current time
+        optimal_wakeup_time = optimal_wakeup_time.replace(hour=OPTIMAL_WAKEUP_HOUR, minute=OPTIMAL_WAKEUP_MINUTE) #change time to eg 9:30
+        helpers.write_log("Optimal time with hour and minute replaced: {}".format(optimal_wakeup_time))
+        if now >= optimal_wakeup_time: #if it is currently later than wakeuptime, the day is wrong
+            optimal_wakeup_time += datetime.timedelta(days=1)
+        helpers.write_log("Optimal time?: {}".format(optimal_wakeup_time))
+        return optimal_wakeup_time
+    #or wake up after the right amount of sleep
     else:
+        helpers.write_log("Else: {}".format(datetime.datetime.now() + sleep_delta))
         return datetime.datetime.now() + sleep_delta
+
 
 def set_cron_alarm(alarm_time):
     my_cron = CronTab(user=True) #load my crontab
