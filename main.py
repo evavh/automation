@@ -168,7 +168,7 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             http_command = command[8:]
             if http_command == "night_on":
                 alarm_time = alarm.alarm_time()
-                alarm.set_cron_alarm(alarm_time)
+                #alarm.set_cron_alarm(alarm_time)
                 night_mode = True
                 priority_change = True
                 day_event.clear()
@@ -189,8 +189,15 @@ def main_function(command_queue, http_status_queue, telegram_status_queue, prese
             elif http_command == "clear_alarm":
                 alarm_time = None
                 alarm.clear_alarm()
+            elif http_command == "alarm_plus":
+                old_alarm_time = alarm.get_cron_alarm()
+                if old_alarm_time:
+                    alarm.set_cron_alarm(old_alarm_time + datetime.timedelta(minutes=15))
+            elif http_command == "alarm_minus":
+                old_alarm_time = alarm.get_cron_alarm()
+                if old_alarm_time:
+                    alarm.set_cron_alarm(old_alarm_time - datetime.timedelta(minutes=15))
                 
-        
         #unimplemented or faulty commands
         else:
             write_log("unknown command: {}".format(command))

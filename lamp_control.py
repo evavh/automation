@@ -13,7 +13,8 @@ from config import *
 BRIDGE = qhue.Bridge(BRIDGE_IP, BRIDGE_USERNAME)
 LAMPS = BRIDGE.lights()
 
-MINIMAL_XY = (0.6205, 0.362)
+#MINIMAL_XY = (0.6205, 0.362)
+MINIMAL_XY = (0.6008, 0.3754)
 
 def lamp_probe():
     for lamp_num in LAMPS:
@@ -91,6 +92,7 @@ def notify():
 def set_to_cur_time(trans_time):
     temp, bright = auto_value_now()
     set_to_temp(temp, bright, trans_time)
+    #night_light_on()
     return temp, bright
 
 if __name__ == '__main__':
